@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zombie Runner 3D - Multiplier Shooter</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="game-container">
+        <!-- 3D Canvas -->
+        <div id="canvas-wrapper"></div>
+
+        <!-- HUD (Oyun İçi Arayüz) -->
+        <div id="hud">
+            <!-- Üst Bar: İlerleme & Skor -->
+            <div class="hud-top">
+                <div class="hud-box score-box">
+                    <span class="hud-icon">🏆</span>
+                    <span id="score-text">0</span>
+                </div>
+
+                <div class="hud-progress-container">
+                    <div class="progress-labels">
+                        <span>BÖLÜM 1</span>
+                        <span>BOSS ☠️</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div id="progress-bar-fill"></div>
+                        <div id="progress-player-icon">🏃</div>
+                    </div>
+                </div>
+
+                <div class="hud-box mute-box" id="mute-btn" title="Sesi Aç/Kapat">
+                    <span id="mute-icon">🔊</span>
+                </div>
+            </div>
+
+            <!-- Boss Can Barı (Boss alanına girince görünür) -->
+            <div id="boss-hud" class="hidden">
+                <div class="boss-label">
+                    <span class="boss-name">🧟‍♂️ DEV ZOMBİ BOSS</span>
+                    <span id="boss-hp-text">1000 / 1000</span>
+                </div>
+                <div class="boss-bar-bg">
+                    <div id="boss-bar-fill"></div>
+                </div>
+            </div>
+
+            <!-- Karakter İstatistik Göstergesi (Alt Panel) -->
+            <div class="hud-bottom">
+                <div class="stat-badge" id="stat-firerate">
+                    <span class="stat-name">Atış Hızı</span>
+                    <span class="stat-val" id="stat-firerate-val">1.0x</span>
+                </div>
+                <div class="stat-badge" id="stat-power">
+                    <span class="stat-name">Güç</span>
+                    <span class="stat-val" id="stat-power-val">Lv.1</span>
+                </div>
+                <div class="stat-badge" id="stat-bullets">
+                    <span class="stat-name">Mermi</span>
+                    <span class="stat-val" id="stat-bullets-val">1</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ekran Üstü Mesaj Efekti (+10 GÜÇ! vb.) -->
+        <div id="floating-banner" class="floating-banner"></div>
+
+        <!-- Başlangıç Ekranı -->
+        <div id="start-screen" class="overlay-screen">
+            <div class="overlay-content">
+                <h1 class="game-title">ZOMBIE<br><span class="highlight">RUNNER 3D</span></h1>
+                <p class="game-subtitle">Kapılardan Geç, Silahını Güçlendir, Zombileri Avla!</p>
+                <div class="instructions-card">
+                    <div class="inst-item">
+                        <span class="inst-icon">⌨️</span>
+                        <span><b>Sol / Sağ Ok</b> (⬅️ ➡️) veya <b>A / D</b> tuşları</span>
+                    </div>
+                    <div class="inst-item">
+                        <span class="inst-icon">👆</span>
+                        <span>Parmağını veya Fareyi <b>sağa-sola kaydır</b></span>
+                    </div>
+                    <div class="inst-item">
+                        <span class="inst-icon">🚪</span>
+                        <span><b>Mavi kapılardan</b> geçerek güçlen</span>
+                    </div>
+                    <div class="inst-item">
+                        <span class="inst-icon">🧟</span>
+                        <span>Yol sonundaki <b>Boss'u yok et!</b></span>
+                    </div>
+                </div>
+                <button id="start-btn" class="primary-btn pulse-anim">OYUNA BAŞLA</button>
+            </div>
+        </div>
+
+        <!-- Oyun Bitti (Game Over) Ekranı -->
+        <div id="gameover-screen" class="overlay-screen hidden">
+            <div class="overlay-content">
+                <h2 class="result-title fail">YENİLDİN!</h2>
+                <p class="result-desc">Zombiler seni alt etti.</p>
+                <div class="final-score-box">
+                    <span>Toplam Skor:</span>
+                    <h3 id="gameover-score">0</h3>
+                </div>
+                <button id="restart-btn" class="primary-btn">TEKRAR DENE</button>
+            </div>
+        </div>
+
+        <!-- Zafer (Victory) Ekranı -->
+        <div id="victory-screen" class="overlay-screen hidden">
+            <div class="overlay-content">
+                <h2 class="result-title win">TEBRİKLER! 🎉</h2>
+                <p class="result-desc">Bölüm Sonu Boss'unu Başarıyla Yıktın!</p>
+                <div class="final-score-box">
+                    <span>Toplam Skor:</span>
+                    <h3 id="victory-score">0</h3>
+                </div>
+                <button id="next-btn" class="primary-btn pulse-anim">SONRAKİ BÖLÜM</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

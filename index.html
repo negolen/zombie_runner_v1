@@ -24,7 +24,7 @@
 
                 <div class="hud-progress-container">
                     <div class="progress-labels">
-                        <span>BÖLÜM 1</span>
+                        <span id="level-label">BÖLÜM 1</span>
                         <span>BOSS ☠️</span>
                     </div>
                     <div class="progress-bar-bg">
@@ -38,15 +38,44 @@
                 </div>
             </div>
 
+            <!-- Kalp Göstergesi (Can Sistemi: Başlangıç 4, Cap 6) -->
+            <div class="hud-hearts-wrapper">
+                <div id="hud-hearts" class="hud-hearts">
+                    <!-- Dinamik 6 kalp slotu -->
+                </div>
+            </div>
+
             <!-- Boss Can Barı (Boss alanına girince görünür) -->
             <div id="boss-hud" class="hidden">
                 <div class="boss-label">
-                    <span class="boss-name">🧟‍♂️ DEV ZOMBİ BOSS</span>
+                    <span class="boss-name" id="boss-name-text">🧟‍♂️ DEV ZOMBİ BOSS</span>
                     <span id="boss-hp-text">1000 / 1000</span>
                 </div>
                 <div class="boss-bar-bg">
                     <div id="boss-bar-fill"></div>
                 </div>
+            </div>
+
+            <!-- Boss Sırasında Aktif 3 Özel Yetenek Butonu -->
+            <div id="boss-skills-bar" class="boss-skills-bar hidden">
+                <button class="skill-btn" id="skill-1-btn" title="1. Skill: Meteor Çağrısı (Klavye: 1)">
+                    <span class="skill-key">1</span>
+                    <span class="skill-icon">☄️</span>
+                    <span class="skill-label">METEOR</span>
+                    <span class="skill-sub">-%25 CAN</span>
+                </button>
+                <button class="skill-btn" id="skill-2-btn" title="2. Skill: Valkyrie Şifası (Klavye: 2)">
+                    <span class="skill-key">2</span>
+                    <span class="skill-icon">👼</span>
+                    <span class="skill-label">VALKYRIE</span>
+                    <span class="skill-sub">4 KALP FULL</span>
+                </button>
+                <button class="skill-btn" id="skill-3-btn" title="3. Skill: Dönen Kalkanlar (Klavye: 3)">
+                    <span class="skill-key">3</span>
+                    <span class="skill-icon">🛡️</span>
+                    <span class="skill-label">KALKAN</span>
+                    <span class="skill-sub">-%50 HASAR</span>
+                </button>
             </div>
 
             <!-- Karakter İstatistik Göstergesi (Alt Panel) -->

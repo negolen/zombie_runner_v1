@@ -153,6 +153,154 @@ canvas {
     pointer-events: none;
 }
 
+/* Kalp Göstergesi (Can Sistemi: 4 Başlangıç, 6 Cap) */
+.hud-hearts-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.hud-hearts {
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 6px 14px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.heart-slot {
+    font-size: 18px;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
+}
+
+.heart-slot.full {
+    color: #ef4444;
+}
+
+.heart-slot.half {
+    color: #f87171;
+    opacity: 0.9;
+}
+
+.heart-slot.empty {
+    color: #475569;
+    opacity: 0.4;
+    filter: none;
+}
+
+.heart-shake {
+    animation: heart-hit 0.4s ease-in-out;
+}
+
+@keyframes heart-hit {
+    0%, 100% { transform: scale(1); }
+    25% { transform: scale(1.35) rotate(-10deg); color: #ff0000; }
+    75% { transform: scale(0.9) rotate(10deg); }
+}
+
+/* Boss Sırasında Aktif Skill Butonları */
+.boss-skills-bar {
+    position: absolute;
+    bottom: 72px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    z-index: 25;
+    pointer-events: auto;
+}
+
+.skill-btn {
+    flex: 1;
+    max-width: 120px;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(56, 189, 248, 0.5);
+    border-radius: 16px;
+    padding: 8px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(56, 189, 248, 0.2);
+    transition: all 0.15s ease-out;
+    color: #fff;
+}
+
+.skill-btn:hover:not(.disabled):not(.used) {
+    border-color: #38bdf8;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(56, 189, 248, 0.4);
+}
+
+.skill-btn:active:not(.disabled):not(.used) {
+    transform: scale(0.95);
+}
+
+.skill-key {
+    position: absolute;
+    top: -8px;
+    right: 6px;
+    background: #38bdf8;
+    color: #0f172a;
+    font-size: 10px;
+    font-weight: 900;
+    padding: 1px 6px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+.skill-icon {
+    font-size: 24px;
+    margin-bottom: 2px;
+}
+
+.skill-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+.skill-sub {
+    font-size: 9px;
+    font-weight: 700;
+    color: #94a3b8;
+}
+
+/* Kilitli ve Kullanılmış Durumlar */
+.skill-btn.disabled {
+    opacity: 0.45;
+    border-color: #475569;
+    cursor: not-allowed;
+    filter: grayscale(0.8);
+    box-shadow: none;
+}
+
+.skill-btn.used {
+    opacity: 0.35;
+    border-color: #334155;
+    cursor: not-allowed;
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.skill-btn.active-shield {
+    border-color: #10b981;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.8), inset 0 0 15px rgba(16, 185, 129, 0.5);
+    animation: shield-glow 1s infinite alternate;
+}
+
+@keyframes shield-glow {
+    from { transform: scale(1); }
+    to { transform: scale(1.05); }
+}
+
 /* Boss Can Barı */
 #boss-hud {
     position: absolute;

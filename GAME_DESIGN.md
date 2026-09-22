@@ -9,6 +9,38 @@
 
 ## 2. Temel Mekanikler
 
+### Görsel Atmosfer & Renk Paleti (Canlı Synthwave/Arcade)
+* Siyah/boğucu arka plan yerine derin alacakaranlık mor-lacivert (`#15122e`) gökyüzü ve atmosferik sis.
+* Işıklandırma: Gökyüzü lavanta-mavi, zemin derin çivit mavisi çift tonlu HemisphereLight ve parlak dinamik DirectionalLight.
+* Pist: Koyu arduvaz asfalt, ortada parlayan neon şeritler, kenarlarda çift renkli parıldayan neon bordürler (sol: camgöbeği mavi, sağ: fuşya pembe) ve hız hissi veren yol kenarı neon kuleler.
+
+### Arayüz & Bilgi Bildirimleri (HUD)
+* Bildirim banner'ı (`floating-banner`): Ekran ortası yerine kalplerin hemen altına, kompakt, yarı saydam (`rgba`) ve görüş alanını engellemeyecek şekilde konumlandırıldı.
+
+### Düşman Eşya Düşürme (Mob Drop Sistemi)
+Zombiler yok edildiğinde %38 ihtimalle yola parlayan 3D toplanabilir eşyalar düşer:
+* ⭐ **Bonus Puan (Altın Yıldız/Gem - %60):** +150 veya +250 anlık skor.
+* ❤️ **Can / Kalp (Mini Kalp - %25):** +0.5 Kalp yenileme (maksimum 6 kalbe kadar).
+* 🛡️ **Defans Kalkanı (Zümrüt Kalkan - %15):** 2.5 saniyeliğine anında %50 hasar azaltıcı kalkan açar.
+
+### Dinamik Kapı Sayısı & Seviye Ölçeklemesi
+* Minimum kapı sayısı **7 Kapı** olarak başlar.
+* Her 3 seviyede bir +1 yeni kapı çifti eklenir:
+  * Formül: `gateCount = 7 + Math.floor((level - 1) / 3)`
+  * Seviye 1-3: 7 Kapı
+  * Seviye 4-6: 8 Kapı
+  * Seviye 7-9: 9 Kapı
+  * Seviye 10+: 10+ Kapı
+* Pist uzunluğu ve Boss arenası kapı sayısına göre dinamik uzar, aralara dengeli zombi dalgaları yerleştirilir.
+
+### Canlı ve Hareketli Boss Davranışı
+Boss artık put gibi durmaz; gerçek bir titan gibi hareket eder:
+* **Adım ve Yürüme Fiziği:** Gövde sağa-sola yalpalar, dev bacaklar adım atar, devasa kollar ritmik olarak sallanır.
+* **Arena İçi Manevra:** Oyuncuyu takip etmenin yanında arena içinde sola ve sağa stratejik adımlar atar (strafe).
+* **Saldırı Hazırlık Tehditleri (Telegraphing):**
+  * Ateş topu öncesi geriye yaslanıp iki kolunu havaya kaldırır ve gözleri parlar.
+  * Kaçılamaz şok dalgası öncesi havaya sıçrayıp yere dev bir darbe indirir (kamera sarsıntısı efekti).
+
 ### Karakter & Hareket
 * Otomatik dikey ileri koşu hızı dengelendi (%10 azaltıldı, 18 -> 16.2). Bu sayede zombileri avlamak ve kapıları seçmek daha stratejik ve kontrollü hale getirildi.
 * Yatay kontrol: 

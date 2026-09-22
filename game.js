@@ -125,6 +125,22 @@ class SoundFX {
         osc.stop(now + 0.3);
     }
 
+    playCoin() {
+        if (this.isMuted || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(987.77, now);
+        osc.frequency.setValueAtTime(1318.51, now + 0.07);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.22);
+    }
+
     playMeteor() {
         if (this.isMuted || !this.ctx) return;
         const now = this.ctx.currentTime;
@@ -210,10 +226,11 @@ const Game = {
     level: 1,
     score: 0,
 
-    // Yol ve İlerleme
-    trackLength: 320,
+    // Yol ve İlerleme (Dinamik hesaplanır)
+    trackLength: 420,
     trackWidth: 9,
-    bossArenaZ: -280,
+    bossArenaZ: -340,
+    worldGroup: null,
 
     // Oyuncu İstatistikleri
     player: {
@@ -243,10 +260,11 @@ const Game = {
     bullets: [],
     enemies: [],
     gatePairs: [],
+    drops: [],
     particles: [],
     bossProjectiles: [],
     shockwaves: [],
-    activeAnimations: [], // Meteor, Valkyrie vb.
+    activeAnimations: [],
     boss: null,
 
     // Dokunmatik & Klavye Kontrolü
@@ -257,7 +275,7 @@ const Game = {
 };
 
 // ==========================================
-// THREE.JS KURULUMU
+// THREE.JS KURULUMU & CANLI SYNTHWAVE ATMOSFERİ
 // ==========================================
 let scene, camera, renderer, container;
 const clock = new THREE.Clock();
@@ -266,11 +284,12 @@ function initThree() {
     container = document.getElementById('canvas-wrapper');
 
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a0f1d);
-    scene.fog = new THREE.FogExp2(0x0a0f1d, 0.015);
+    // Büyüleyici derin alacakaranlık mor-lacivert gökyüzü
+    scene.background = new THREE.Color(0x15122e);
+    scene.fog = new THREE.FogExp2(0x15122e, 0.008);
 
     const aspect = container.clientWidth / container.clientHeight;
-    camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 500);
+    camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 600);
     camera.position.set(0, 5.5, 8.5);
     camera.lookAt(0, 1.5, -5);
 
@@ -281,26 +300,29 @@ function initThree() {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    // Çift Tonlu Aydınlatma
+    const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.85);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-    dirLight.position.set(15, 30, 20);
+    const hemiLight = new THREE.HemisphereLight(0x818cf8, 0x1e1b4b, 0.75);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfff1f2, 1.0);
+    dirLight.position.set(15, 35, 20);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.width = 1024;
     dirLight.shadow.mapSize.height = 1024;
     dirLight.shadow.camera.near = 0.5;
-    dirLight.shadow.camera.far = 100;
-    dirLight.shadow.camera.left = -15;
-    dirLight.shadow.camera.right = 15;
-    dirLight.shadow.camera.top = 25;
-    dirLight.shadow.camera.bottom = -25;
+    dirLight.shadow.camera.far = 120;
+    dirLight.shadow.camera.left = -16;
+    dirLight.shadow.camera.right = 16;
+    dirLight.shadow.camera.top = 30;
+    dirLight.shadow.camera.bottom = -30;
     scene.add(dirLight);
 
     window.addEventListener('resize', onWindowResize);
 
     setupControls();
-    buildWorld();
     buildPlayer();
     setupLevel(Game.level);
 
@@ -406,58 +428,100 @@ function setupControls() {
 }
 
 // ==========================================
-// ÇEVRE & YOL OLUŞTURMA (World)
+// ÇEVRE & DİNAMİK PİST OLUŞTURMA (World)
 // ==========================================
 function buildWorld() {
+    if (Game.worldGroup) {
+        scene.remove(Game.worldGroup);
+    }
+    const worldGroup = new THREE.Group();
+
+    // Ana Yol Zemini (Metalik parlak koyu arduvaz)
     const roadGeo = new THREE.PlaneGeometry(Game.trackWidth, Game.trackLength);
     const roadMat = new THREE.MeshStandardMaterial({
-        color: 0x182033,
-        roughness: 0.8,
-        metalness: 0.2
+        color: 0x181e36,
+        roughness: 0.6,
+        metalness: 0.3
     });
     const road = new THREE.Mesh(roadGeo, roadMat);
     road.rotation.x = -Math.PI / 2;
     road.position.set(0, 0, -Game.trackLength / 2 + 10);
     road.receiveShadow = true;
-    scene.add(road);
+    worldGroup.add(road);
 
-    const curbGeo = new THREE.BoxGeometry(0.3, 0.4, Game.trackLength);
-    const curbMat = new THREE.MeshStandardMaterial({
+    // Ortadaki kesik neon şeritler (Center dashed line)
+    const dashCount = Math.floor(Game.trackLength / 6);
+    const dashGeo = new THREE.PlaneGeometry(0.2, 3);
+    const dashMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    for (let i = 0; i < dashCount; i++) {
+        const dash = new THREE.Mesh(dashGeo, dashMat);
+        dash.rotation.x = -Math.PI / 2;
+        dash.position.set(0, 0.02, 10 - i * 6);
+        worldGroup.add(dash);
+    }
+
+    // Sol Bordür (Parlayan Neon Cyan)
+    const curbGeo = new THREE.BoxGeometry(0.3, 0.45, Game.trackLength);
+    const leftCurbMat = new THREE.MeshStandardMaterial({
         color: 0x00f2fe,
-        emissive: 0x0084ff,
-        emissiveIntensity: 0.4
+        emissive: 0x00b4d8,
+        emissiveIntensity: 0.7
     });
+    const leftCurb = new THREE.Mesh(curbGeo, leftCurbMat);
+    leftCurb.position.set(-Game.trackWidth / 2, 0.22, -Game.trackLength / 2 + 10);
+    worldGroup.add(leftCurb);
 
-    const leftCurb = new THREE.Mesh(curbGeo, curbMat);
-    leftCurb.position.set(-Game.trackWidth / 2, 0.2, -Game.trackLength / 2 + 10);
-    scene.add(leftCurb);
+    // Sağ Bordür (Parlayan Neon Magenta)
+    const rightCurbMat = new THREE.MeshStandardMaterial({
+        color: 0xf43f5e,
+        emissive: 0xe11d48,
+        emissiveIntensity: 0.7
+    });
+    const rightCurb = new THREE.Mesh(curbGeo, rightCurbMat);
+    rightCurb.position.set(Game.trackWidth / 2, 0.22, -Game.trackLength / 2 + 10);
+    worldGroup.add(rightCurb);
 
-    const rightCurb = leftCurb.clone();
-    rightCurb.position.x = Game.trackWidth / 2;
-    scene.add(rightCurb);
+    // Yol Kenarı Işıklı Pylonlar (Hız hissi ve atmosfer katan neon sütunlar)
+    const pylonGeo = new THREE.BoxGeometry(0.4, 2.5, 0.4);
+    const pylonCount = Math.floor(Game.trackLength / 18);
+    for (let i = 0; i < pylonCount; i++) {
+        const zPos = 10 - i * 18;
+        const pL = new THREE.Mesh(pylonGeo, leftCurbMat);
+        pL.position.set(-Game.trackWidth / 2 - 0.8, 1.25, zPos);
+        worldGroup.add(pL);
 
-    // Boss Arenası
-    const arenaGeo = new THREE.CylinderGeometry(16, 16, 0.6, 32);
+        const pR = new THREE.Mesh(pylonGeo, rightCurbMat);
+        pR.position.set(Game.trackWidth / 2 + 0.8, 1.25, zPos);
+        worldGroup.add(pR);
+    }
+
+    // Boss Arenası (Genişletilmiş dairesel platform)
+    const arenaGeo = new THREE.CylinderGeometry(18, 18, 0.6, 32);
     const arenaMat = new THREE.MeshStandardMaterial({
-        color: 0x24162e,
-        roughness: 0.6,
-        metalness: 0.3
+        color: 0x241738,
+        roughness: 0.5,
+        metalness: 0.4
     });
     const arena = new THREE.Mesh(arenaGeo, arenaMat);
     arena.position.set(0, -0.1, Game.bossArenaZ);
     arena.receiveShadow = true;
-    scene.add(arena);
+    worldGroup.add(arena);
 
-    const ringGeo = new THREE.RingGeometry(15.5, 16.2, 32);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide });
+    // Arena Dış Halka Efekti (Neon kırmızı/mor parıltı)
+    const ringGeo = new THREE.RingGeometry(17.4, 18.2, 32);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xff0055, side: THREE.DoubleSide });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.rotation.x = -Math.PI / 2;
     ring.position.set(0, 0.22, Game.bossArenaZ);
-    scene.add(ring);
+    worldGroup.add(ring);
 
-    const gridHelper = new THREE.GridHelper(400, 80, 0x1e293b, 0x0f172a);
-    gridHelper.position.set(0, -0.3, -150);
-    scene.add(gridHelper);
+    // Derinlik Grid Izgarası
+    const gridHelper = new THREE.GridHelper(500, 70, 0x4338ca, 0x1e1b4b);
+    gridHelper.position.set(0, -0.3, Game.bossArenaZ / 2);
+    worldGroup.add(gridHelper);
+
+    scene.add(worldGroup);
+    Game.worldGroup = worldGroup;
 }
 
 // ==========================================
@@ -520,14 +584,14 @@ function buildPlayer() {
     rightLeg.position.x = 0.25;
     playerGroup.add(rightLeg);
 
-    // 3. SKILL: Dönen Kalkanlar Grubu (3 adet mini neon kalkan)
+    // 3. SKILL: Dönen Kalkanlar Grubu
     const shieldOrbitGroup = new THREE.Group();
     shieldOrbitGroup.visible = false;
     const miniShieldGeo = new THREE.BoxGeometry(0.5, 0.8, 0.08);
     const miniShieldMat = new THREE.MeshStandardMaterial({
         color: 0x10b981,
         emissive: 0x10b981,
-        emissiveIntensity: 0.7,
+        emissiveIntensity: 0.8,
         transparent: true,
         opacity: 0.85
     });
@@ -548,13 +612,23 @@ function buildPlayer() {
 }
 
 // ==========================================
-// SEVİYE KURULUMU (Kapılar, Zombiler, Boss)
+// SEVİYE KURULUMU (Dinamik Kapılar, Zombiler, Boss)
 // ==========================================
 function setupLevel(lvl) {
     clearLevelEntities();
 
     // Seviye Etiketi
     document.getElementById('level-label').textContent = `BÖLÜM ${lvl}`;
+
+    // Kapı Sayısı: Minimum 7 Kapı, her 3 seviyede bir +1 yeni kapı!
+    const gateCount = 7 + Math.floor((lvl - 1) / 3);
+    const segmentDist = 42;
+    const trackSpan = gateCount * segmentDist;
+    Game.trackLength = trackSpan + 140;
+    Game.bossArenaZ = -(trackSpan + 50);
+
+    // Dünyayı dinamik uzunluğa göre oluştur
+    buildWorld();
 
     // Boss Skills Reset
     Game.player.skill1Used = false;
@@ -563,9 +637,12 @@ function setupLevel(lvl) {
     Game.player.shieldTimer = 0;
     if (Game.player.shieldMesh) Game.player.shieldMesh.visible = false;
 
-    // KAPILAR (Z lokasyonları: -40, -95, -155, -215)
-    // Her çiftte %25 şansla EN FAZLA 1 adet negatif kapı çıkabilir
-    const zPositions = [-40, -95, -155, -215];
+    // KAPILAR (Dinamik zPositions)
+    const zPositions = [];
+    for (let i = 0; i < gateCount; i++) {
+        zPositions.push(-38 - (i * segmentDist));
+    }
+
     zPositions.forEach(z => {
         const hasNegative = Math.random() < 0.25;
         const negativeSide = Math.random() < 0.5 ? 'left' : 'right';
@@ -601,7 +678,6 @@ function setupLevel(lvl) {
         } else {
             leftCfg = pickPos();
             rightCfg = pickPos();
-            // Aynı gelmemesi için kontrol
             while (rightCfg.label === leftCfg.label) {
                 rightCfg = pickPos();
             }
@@ -610,9 +686,9 @@ function setupLevel(lvl) {
         createNoSkipGatePair(z, leftCfg, rightCfg);
     });
 
-    // ZOMBİLER (Seviye can çarpanı ile)
+    // ZOMBİLER (Tüm pist boyunca kapılar arasına yayılmış dalgalar)
     const hpMult = 1 + (lvl - 1) * 0.35;
-    for (let z = -20; z > -260; z -= 15) {
+    for (let z = -18; z > Game.bossArenaZ + 20; z -= 14) {
         const nearGate = zPositions.some(gz => Math.abs(gz - z) < 7);
         if (nearGate) continue;
 
@@ -651,6 +727,9 @@ function clearLevelEntities() {
         scene.remove(pair.right.mesh);
     });
     Game.gatePairs = [];
+
+    Game.drops.forEach(d => scene.remove(d.mesh));
+    Game.drops = [];
 
     Game.particles.forEach(p => scene.remove(p.mesh));
     Game.particles = [];
@@ -847,7 +926,45 @@ function build3DHealthBar(width) {
 }
 
 // ==========================================
-// 10 TEMALI BOSS OLUŞTURMA
+// MOB EŞYA DÜŞÜRME (Drop Sistemi)
+// ==========================================
+function spawnDrop(x, z) {
+    const rand = Math.random();
+    let type = 'score';
+    let color = 0xfbbf24; // Altın Yıldız / Gem
+    let geo = new THREE.OctahedronGeometry(0.32);
+
+    if (rand < 0.25) {
+        type = 'heart';
+        color = 0xef4444; // Mini Kalp
+        geo = new THREE.DodecahedronGeometry(0.28);
+    } else if (rand < 0.40) {
+        type = 'shield';
+        color = 0x10b981; // Zümrüt Kalkan
+        geo = new THREE.BoxGeometry(0.35, 0.45, 0.1);
+    }
+
+    const mat = new THREE.MeshStandardMaterial({
+        color: color,
+        emissive: color,
+        emissiveIntensity: 0.8,
+        roughness: 0.2
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, 0.6, z);
+    mesh.castShadow = true;
+    scene.add(mesh);
+
+    Game.drops.push({
+        mesh: mesh,
+        type: type,
+        color: color,
+        time: Math.random() * 10
+    });
+}
+
+// ==========================================
+// 10 TEMALI BOSS OLUŞTURMA (Eklemli & Hareketli)
 // ==========================================
 function createBoss(lvl) {
     const themeIdx = (lvl - 1) % BOSS_THEMES.length;
@@ -861,16 +978,20 @@ function createBoss(lvl) {
         roughness: 0.5,
         metalness: 0.4
     });
+
+    // Gövde
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.9 * scale, 1.1 * scale, 0.6 * scale), bodyMat);
     body.position.y = 1.0 * scale;
     body.castShadow = true;
     group.add(body);
 
+    // Kafa
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.6 * scale, 0.6 * scale, 0.6 * scale), bodyMat);
     head.position.y = 1.8 * scale;
     head.castShadow = true;
     group.add(head);
 
+    // Gözler
     const eyeMat = new THREE.MeshBasicMaterial({ color: theme.eyeColor });
     const eye1 = new THREE.Mesh(new THREE.BoxGeometry(0.15 * scale, 0.1 * scale, 0.1 * scale), eyeMat);
     eye1.position.set(-0.16 * scale, 1.85 * scale, 0.3 * scale);
@@ -879,6 +1000,7 @@ function createBoss(lvl) {
     group.add(eye1);
     group.add(eye2);
 
+    // Boynuzlar
     const hornGeo = new THREE.ConeGeometry(0.15 * scale, 0.55 * scale, 4);
     const hornMat = new THREE.MeshStandardMaterial({ color: theme.hornColor });
     const hornL = new THREE.Mesh(hornGeo, hornMat);
@@ -899,6 +1021,46 @@ function createBoss(lvl) {
     group.add(shoulderL);
     group.add(shoulderR);
 
+    // Eklemli Kollar (Arms with Shoulder Pivot)
+    const armGeo = new THREE.BoxGeometry(0.28 * scale, 0.85 * scale, 0.28 * scale);
+    const armMat = new THREE.MeshStandardMaterial({ color: theme.color, roughness: 0.5 });
+    
+    const leftArmPivot = new THREE.Group();
+    leftArmPivot.position.set(-0.65 * scale, 1.4 * scale, 0);
+    const leftArm = new THREE.Mesh(armGeo, armMat);
+    leftArm.position.y = -0.4 * scale;
+    leftArm.castShadow = true;
+    leftArmPivot.add(leftArm);
+    group.add(leftArmPivot);
+
+    const rightArmPivot = new THREE.Group();
+    rightArmPivot.position.set(0.65 * scale, 1.4 * scale, 0);
+    const rightArm = new THREE.Mesh(armGeo, armMat);
+    rightArm.position.y = -0.4 * scale;
+    rightArm.castShadow = true;
+    rightArmPivot.add(rightArm);
+    group.add(rightArmPivot);
+
+    // Eklemli Bacaklar (Legs with Hip Pivot)
+    const legGeo = new THREE.BoxGeometry(0.32 * scale, 0.7 * scale, 0.32 * scale);
+    const legMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+
+    const leftLegPivot = new THREE.Group();
+    leftLegPivot.position.set(-0.28 * scale, 0.45 * scale, 0);
+    const leftLeg = new THREE.Mesh(legGeo, legMat);
+    leftLeg.position.y = -0.35 * scale;
+    leftLeg.castShadow = true;
+    leftLegPivot.add(leftLeg);
+    group.add(leftLegPivot);
+
+    const rightLegPivot = new THREE.Group();
+    rightLegPivot.position.set(0.28 * scale, 0.45 * scale, 0);
+    const rightLeg = new THREE.Mesh(legGeo, legMat);
+    rightLeg.position.y = -0.35 * scale;
+    rightLeg.castShadow = true;
+    rightLegPivot.add(rightLeg);
+    group.add(rightLegPivot);
+
     group.position.set(0, 0, Game.bossArenaZ - 4);
     scene.add(group);
 
@@ -914,7 +1076,17 @@ function createBoss(lvl) {
         radius: 1.8,
         active: false,
         shootTimer: 0,
-        pulseTimer: 0
+        pulseTimer: 0,
+        walkTime: 0,
+        strafeTimer: 0,
+        strafeTargetX: 0,
+        limbs: {
+            leftArm: leftArmPivot,
+            rightArm: rightArmPivot,
+            leftLeg: leftLegPivot,
+            rightLeg: rightLegPivot,
+            head: head
+        }
     };
 }
 
@@ -932,7 +1104,6 @@ function fireBossProjectile() {
     projMesh.position.set(bPos.x, 1.5, bPos.z + 2);
     scene.add(projMesh);
 
-    // Oyuncunun bulunduğu X koordinatına doğru yön
     const targetX = p.x;
     const dx = targetX - bPos.x;
     const dz = p.z - bPos.z;
@@ -951,7 +1122,6 @@ function fireBossShockwave() {
     if (!Game.boss || !Game.boss.active) return;
     const bPos = Game.boss.mesh.position;
 
-    // Zemin üzerinde hızla genişleyen şok dalgası halkası
     const waveGeo = new THREE.RingGeometry(0.5, 1.2, 32);
     const waveMat = new THREE.MeshBasicMaterial({
         color: 0xff0055,
@@ -967,7 +1137,7 @@ function fireBossShockwave() {
     Game.shockwaves.push({
         mesh: waveMesh,
         currentRadius: 1.2,
-        maxRadius: 35,
+        maxRadius: 38,
         speed: 26,
         hasHitPlayer: false
     });
@@ -978,8 +1148,6 @@ function fireBossShockwave() {
 // ==========================================
 // BOSS 3 ÖZEL SKILL MEKANİĞİ & 3D EFEKTLER
 // ==========================================
-
-// 1. SKILL: METEOR ÇAĞRISI (%25 Boss Canı Hasarı)
 function triggerSkill1() {
     if (Game.state !== GAME_STATE.BOSS_FIGHT || !Game.boss || !Game.boss.active) return;
     if (Game.player.skill1Used) return;
@@ -989,7 +1157,6 @@ function triggerSkill1() {
     btn.classList.add('used');
     showBanner('☄️ METEOR ÇAĞRILDI! ☄️');
 
-    // Gökyüzünden Boss'a Düşen 3D Meteor
     const bPos = Game.boss.mesh.position;
     const meteorGeo = new THREE.DodecahedronGeometry(1.4);
     const meteorMat = new THREE.MeshStandardMaterial({
@@ -1019,7 +1186,6 @@ function triggerSkill1() {
     });
 }
 
-// 2. SKILL: VALKYRIE MELEĞİ ŞİFASI (Can < 4 ise 4 Kalbe Tamamlar)
 function triggerSkill2() {
     if (Game.state !== GAME_STATE.BOSS_FIGHT) return;
     if (Game.player.hearts >= 4.0) {
@@ -1030,16 +1196,13 @@ function triggerSkill2() {
     sfx.playHeal();
     showBanner('👼 VALKYRIE GELDİ: CAN FULLENDİ! 👼');
 
-    // Gökyüzünden süzülen altın melek figürü
     const p = Game.player;
     const valkGroup = new THREE.Group();
     const angelMat = new THREE.MeshBasicMaterial({ color: 0xfde047 });
     
-    // Melek Gövdesi
     const angelBody = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.4, 1.2), angelMat);
     valkGroup.add(angelBody);
 
-    // Kanatlar
     const wingGeo = new THREE.PlaneGeometry(1.2, 0.6);
     const wingL = new THREE.Mesh(wingGeo, angelMat);
     wingL.position.set(-0.7, 0.4, 0);
@@ -1071,7 +1234,6 @@ function triggerSkill2() {
     updateSkillsUI();
 }
 
-// 3. SKILL: DÖNEN KALKANLAR (2sn Boyunca %50 Hasar Azaltma)
 function triggerSkill3() {
     if (Game.state !== GAME_STATE.BOSS_FIGHT) return;
     if (Game.player.skill3Cooldown > 0 || Game.player.isShieldActive) return;
@@ -1098,25 +1260,22 @@ function takePlayerDamage(amount) {
     const p = Game.player;
     if (p.invulnerableTimer > 0) return;
 
-    // Eğer Kalkan Aktifse Hasar %50 Azalır
     let finalDamage = amount;
     if (p.isShieldActive) {
         finalDamage = amount * 0.5;
     }
 
     p.hearts = Math.max(0, p.hearts - finalDamage);
-    p.invulnerableTimer = 0.8; // 0.8 saniye dokunulmazlık
+    p.invulnerableTimer = 0.8;
 
     sfx.playHurt();
     updateHeartsUI();
     updateSkillsUI();
 
-    // Kalp Sarsılma Efekti
     const heartsWrap = document.getElementById('hud-hearts');
     heartsWrap.classList.add('heart-shake');
     setTimeout(() => heartsWrap.classList.remove('heart-shake'), 400);
 
-    // Kırmızı yanıp sönme
     if (p.mesh) {
         p.limbs.bodyMat.color.setHex(0xff0000);
         setTimeout(() => {
@@ -1134,7 +1293,6 @@ function updateHeartsUI() {
     const container = document.getElementById('hud-hearts');
     container.innerHTML = '';
 
-    // Toplam 6 Slot
     for (let i = 1; i <= 6; i++) {
         const slot = document.createElement('span');
         slot.className = 'heart-slot';
@@ -1160,21 +1318,18 @@ function updateSkillsUI() {
     const btn2 = document.getElementById('skill-2-btn');
     const btn3 = document.getElementById('skill-3-btn');
 
-    // 1. Skill (Tek Kullanımlık)
     if (p.skill1Used) {
         btn1.classList.add('used');
     } else {
         btn1.classList.remove('used');
     }
 
-    // 2. Skill (Can 4'ün altındayken açık, 4 veya üstündeyken kilitli)
     if (p.hearts < 4.0) {
         btn2.classList.remove('disabled');
     } else {
         btn2.classList.add('disabled');
     }
 
-    // 3. Skill (Cooldown kontrolü)
     if (p.skill3Cooldown > 0 && !p.isShieldActive) {
         btn3.classList.add('disabled');
         btn3.querySelector('.skill-sub').textContent = `${Math.ceil(p.skill3Cooldown)}s`;
@@ -1394,6 +1549,12 @@ function update(delta) {
                     createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, e.originalColor);
                     scene.remove(e.mesh);
                     if (e.hpBarMesh) scene.remove(e.hpBarMesh);
+
+                    // Mob Drop (%38 şans)
+                    if (Math.random() < 0.38) {
+                        spawnDrop(e.mesh.position.x, e.mesh.position.z);
+                    }
+
                     Game.enemies.splice(j, 1);
                     Game.score += 50;
                     document.getElementById('score-text').textContent = Game.score;
@@ -1484,14 +1645,12 @@ function update(delta) {
         if (!pair.triggered && p.z <= pair.z && p.z >= pair.z - 2.5) {
             pair.triggered = true;
 
-            // X < 0 ise Sol Kapı, X >= 0 ise Sağ Kapı
             const isLeft = p.x < 0;
             const chosen = isLeft ? pair.left : pair.right;
             const unchosen = isLeft ? pair.right : pair.left;
 
             applyGateUpgrade(chosen.config);
 
-            // Seçilen kapı büyüme efekti, diğeri anında kaybolur
             chosen.mesh.scale.set(1.2, 1.2, 1.2);
             unchosen.mesh.visible = false;
 
@@ -1501,14 +1660,93 @@ function update(delta) {
         }
     });
 
-    // BOSS HAREKETİ & SALDIRILARI (Kaçılabilir Füze & Kaçılamaz Şok Dalgası)
+    // DÜŞEN EŞYALAR (Drops) GÜNCELLEME & TOPLAMA
+    for (let i = Game.drops.length - 1; i >= 0; i--) {
+        const d = Game.drops[i];
+        d.time += delta * 4;
+        d.mesh.rotation.y += delta * 3;
+        d.mesh.rotation.x = Math.sin(d.time * 0.5) * 0.2;
+        d.mesh.position.y = 0.55 + Math.sin(d.time) * 0.15;
+
+        // Karakterle Çarpışma / Toplama
+        const dx = p.x - d.mesh.position.x;
+        const dz = p.z - d.mesh.position.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+
+        if (dist < 1.3) {
+            if (d.type === 'score') {
+                Game.score += 200;
+                document.getElementById('score-text').textContent = Game.score;
+                sfx.playCoin();
+                showBanner('⭐ +200 BONUS SKOR!');
+            } else if (d.type === 'heart') {
+                p.hearts = Math.min(6.0, p.hearts + 0.5);
+                updateHeartsUI();
+                updateSkillsUI();
+                sfx.playHeal();
+                showBanner('❤️ +0.5 KALP!');
+            } else if (d.type === 'shield') {
+                p.isShieldActive = true;
+                p.shieldTimer = 2.5;
+                if (p.shieldMesh) p.shieldMesh.visible = true;
+                sfx.playShield();
+                showBanner('🛡️ DEFANS KALKANI AKTİF!');
+            }
+
+            createExplosion(d.mesh.position.x, 0.8, d.mesh.position.z, d.color, 8);
+            scene.remove(d.mesh);
+            Game.drops.splice(i, 1);
+            continue;
+        }
+
+        if (d.mesh.position.z > p.z + 12) {
+            scene.remove(d.mesh);
+            Game.drops.splice(i, 1);
+        }
+    }
+
+    // BOSS HAREKETİ & CANLI ANİMASYONLARI
     if (Game.boss && Game.boss.active) {
         const boss = Game.boss;
+        boss.walkTime = (boss.walkTime || 0) + delta * 4.5;
+        boss.strafeTimer = (boss.strafeTimer || 0) + delta;
 
-        // Boss oyuncuyu X ekseninde takip eder
-        boss.mesh.position.x += (p.x - boss.mesh.position.x) * 1.5 * delta;
-        const breath = 1 + Math.sin(clock.getElapsedTime() * 4) * 0.05;
-        boss.mesh.scale.set(breath, breath, breath);
+        // Arena içi dinamik manevra & oyuncu takibi
+        if (boss.strafeTimer > 2.2) {
+            boss.strafeTimer = 0;
+            boss.strafeTargetX = (Math.random() - 0.5) * (Game.trackWidth - 3.0);
+        }
+
+        const targetX = boss.strafeTargetX * 0.6 + p.x * 0.4;
+        boss.mesh.position.x += (targetX - boss.mesh.position.x) * 2.2 * delta;
+
+        // Ağır titan yürüyüşü: Y sekmesi ve Z salınımı
+        const stepBob = Math.abs(Math.sin(boss.walkTime * 2)) * 0.35;
+        boss.mesh.position.y = stepBob;
+        boss.mesh.rotation.z = Math.sin(boss.walkTime) * 0.08;
+
+        // Saldırı hazırlığı (Telegraph) animasyonları
+        if (boss.limbs) {
+            if (boss.shootTimer >= 2.2) {
+                // Ateş topu hazırlığı: İki kolu havaya kalkar, geriye yaslanır
+                boss.limbs.leftArm.rotation.x = -1.4;
+                boss.limbs.rightArm.rotation.x = -1.4;
+                boss.mesh.rotation.x = -0.15;
+            } else if (boss.pulseTimer >= 3.1) {
+                // Şok dalgası hazırlığı: Havaya sıçrama
+                boss.mesh.position.y = stepBob + 1.2;
+                boss.limbs.leftArm.rotation.x = -1.9;
+                boss.limbs.rightArm.rotation.x = -1.9;
+                boss.mesh.rotation.x = 0.1;
+            } else {
+                // Doğal yürüyüş kol ve bacak sallanması
+                boss.mesh.rotation.x = 0;
+                boss.limbs.leftArm.rotation.x = Math.sin(boss.walkTime) * 0.7;
+                boss.limbs.rightArm.rotation.x = -Math.sin(boss.walkTime) * 0.7;
+                boss.limbs.leftLeg.rotation.x = -Math.sin(boss.walkTime) * 0.4;
+                boss.limbs.rightLeg.rotation.x = Math.sin(boss.walkTime) * 0.4;
+            }
+        }
 
         // 1. Saldırı: Kaçılabilir Füze (Her 2.8 saniyede bir)
         boss.shootTimer += delta;
@@ -1532,13 +1770,12 @@ function update(delta) {
         bp.mesh.position.z += bp.vz * delta;
         bp.life -= delta;
 
-        // Oyuncuyla Çarpışma
         const dx = p.x - bp.mesh.position.x;
         const dz = p.z - bp.mesh.position.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
 
         if (dist < 1.0) {
-            takePlayerDamage(1.0); // 1 Kalp Hasar (Kalkan varsa 0.5)
+            takePlayerDamage(1.0);
             scene.remove(bp.mesh);
             Game.bossProjectiles.splice(i, 1);
             continue;
@@ -1556,12 +1793,11 @@ function update(delta) {
         sw.currentRadius += sw.speed * delta;
         sw.mesh.scale.set(sw.currentRadius, sw.currentRadius, 1);
 
-        // Oyuncu dalga yarıçapına girdiğinde 0.5 kalp hasar
         const bPos = Game.boss.mesh.position;
         const distToBoss = Math.abs(p.z - bPos.z);
         if (!sw.hasHitPlayer && sw.currentRadius >= distToBoss - 1.0) {
             sw.hasHitPlayer = true;
-            takePlayerDamage(0.5); // 0.5 Kalp Hasar (Kalkanla 0.25)
+            takePlayerDamage(0.5);
             showBanner('💥 KAÇILAMAZ ŞOK DALGASI! (-0.5 KALP)', false);
         }
 

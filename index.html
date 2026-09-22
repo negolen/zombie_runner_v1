@@ -15,44 +15,47 @@
 
         <!-- HUD (Oyun İçi Arayüz) -->
         <div id="hud">
-            <!-- Üst Bar: İlerleme & Skor -->
-            <div class="hud-top">
-                <div class="hud-box score-box">
-                    <span class="hud-icon">🏆</span>
-                    <span id="score-text">0</span>
-                </div>
-
-                <div class="hud-progress-container">
-                    <div class="progress-labels">
-                        <span id="level-label">BÖLÜM 1</span>
-                        <span>BOSS ☠️</span>
+            <!-- Üst Grup (Skor, İlerleme, Kalpler ve Boss Barı) -->
+            <div class="hud-header">
+                <!-- Üst Bar: İlerleme & Skor -->
+                <div class="hud-top">
+                    <div class="hud-box score-box">
+                        <span class="hud-icon">🏆</span>
+                        <span id="score-text">0</span>
                     </div>
-                    <div class="progress-bar-bg">
-                        <div id="progress-bar-fill"></div>
-                        <div id="progress-player-icon">🏃</div>
+
+                    <div class="hud-progress-container">
+                        <div class="progress-labels">
+                            <span id="level-label">BÖLÜM 1</span>
+                            <span>BOSS ☠️</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div id="progress-bar-fill"></div>
+                            <div id="progress-player-icon">🏃</div>
+                        </div>
+                    </div>
+
+                    <div class="hud-box mute-box" id="mute-btn" title="Sesi Aç/Kapat">
+                        <span id="mute-icon">🔊</span>
                     </div>
                 </div>
 
-                <div class="hud-box mute-box" id="mute-btn" title="Sesi Aç/Kapat">
-                    <span id="mute-icon">🔊</span>
+                <!-- Kalp Göstergesi (Can Sistemi: Başlangıç 4, Cap 6) -->
+                <div class="hud-hearts-wrapper">
+                    <div id="hud-hearts" class="hud-hearts">
+                        <!-- Dinamik 6 kalp slotu -->
+                    </div>
                 </div>
-            </div>
 
-            <!-- Kalp Göstergesi (Can Sistemi: Başlangıç 4, Cap 6) -->
-            <div class="hud-hearts-wrapper">
-                <div id="hud-hearts" class="hud-hearts">
-                    <!-- Dinamik 6 kalp slotu -->
-                </div>
-            </div>
-
-            <!-- Boss Can Barı (Boss alanına girince görünür) -->
-            <div id="boss-hud" class="hidden">
-                <div class="boss-label">
-                    <span class="boss-name" id="boss-name-text">🧟‍♂️ DEV ZOMBİ BOSS</span>
-                    <span id="boss-hp-text">1000 / 1000</span>
-                </div>
-                <div class="boss-bar-bg">
-                    <div id="boss-bar-fill"></div>
+                <!-- Boss Can Barı (Boss alanına girince görünür) -->
+                <div id="boss-hud" class="hidden">
+                    <div class="boss-label">
+                        <span class="boss-name" id="boss-name-text">🧟‍♂️ DEV ZOMBİ BOSS</span>
+                        <span id="boss-hp-text">1000 / 1000</span>
+                    </div>
+                    <div class="boss-bar-bg">
+                        <div id="boss-bar-fill"></div>
+                    </div>
                 </div>
             </div>
 

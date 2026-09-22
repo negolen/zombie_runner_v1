@@ -182,16 +182,16 @@ const sfx = new SoundFX();
 // 10 FARKLI BOSS TEMASI & ÖZELLİKLERİ
 // ==========================================
 const BOSS_THEMES = [
-    { name: "ZOMBİ TİTAN", color: 0x3b0764, eyeColor: 0xff0055, hornColor: 0xef4444, scale: 3.2, hp: 600 },
-    { name: "MAGMA GOLEM", color: 0x9a3412, eyeColor: 0xfacc15, hornColor: 0xea580c, scale: 3.4, hp: 750 },
-    { name: "BUZ DEVİ", color: 0x0284c7, eyeColor: 0x38bdf8, hornColor: 0xbae6fd, scale: 3.3, hp: 920 },
-    { name: "ZEHİR LORDU", color: 0x15803d, eyeColor: 0xa3e635, hornColor: 0x4ade80, scale: 3.5, hp: 1100 },
-    { name: "SİBER MECH", color: 0x334155, eyeColor: 0xef4444, hornColor: 0x38bdf8, scale: 3.4, hp: 1350 },
-    { name: "KEMİK KRALI", color: 0xd6d3d1, eyeColor: 0x6366f1, hornColor: 0xf59e0b, scale: 3.3, hp: 1600 },
-    { name: "KARANLIK ŞÖVALYE", color: 0x0f172a, eyeColor: 0xa855f7, hornColor: 0x7c3aed, scale: 3.6, hp: 1900 },
-    { name: "KAN İBLİSİ", color: 0x881337, eyeColor: 0xf43f5e, hornColor: 0x991b1b, scale: 3.5, hp: 2200 },
-    { name: "FIRTINA DEVİ", color: 0x1e3a8a, eyeColor: 0x67e8f9, hornColor: 0x60a5fa, scale: 3.6, hp: 2550 },
-    { name: "KIYAMET HÜKÜMDARI", color: 0x18181b, eyeColor: 0xfbbf24, hornColor: 0xd97706, scale: 4.0, hp: 3000 }
+    { name: "ZOMBİ TİTAN", color: 0x3b0764, eyeColor: 0xff0055, hornColor: 0xef4444, scale: 3.2, hp: 4500 },
+    { name: "MAGMA GOLEM", color: 0x9a3412, eyeColor: 0xfacc15, hornColor: 0xea580c, scale: 3.4, hp: 5800 },
+    { name: "BUZ DEVİ", color: 0x0284c7, eyeColor: 0x38bdf8, hornColor: 0xbae6fd, scale: 3.3, hp: 7200 },
+    { name: "ZEHİR LORDU", color: 0x15803d, eyeColor: 0xa3e635, hornColor: 0x4ade80, scale: 3.5, hp: 8800 },
+    { name: "SİBER MECH", color: 0x334155, eyeColor: 0xef4444, hornColor: 0x38bdf8, scale: 3.4, hp: 10600 },
+    { name: "KEMİK KRALI", color: 0xd6d3d1, eyeColor: 0x6366f1, hornColor: 0xf59e0b, scale: 3.3, hp: 12600 },
+    { name: "KARANLIK ŞÖVALYE", color: 0x0f172a, eyeColor: 0xa855f7, hornColor: 0x7c3aed, scale: 3.6, hp: 15000 },
+    { name: "KAN İBLİSİ", color: 0x881337, eyeColor: 0xf43f5e, hornColor: 0x991b1b, scale: 3.5, hp: 17800 },
+    { name: "FIRTINA DEVİ", color: 0x1e3a8a, eyeColor: 0x67e8f9, hornColor: 0x60a5fa, scale: 3.6, hp: 21000 },
+    { name: "KIYAMET HÜKÜMDARI", color: 0x18181b, eyeColor: 0xfbbf24, hornColor: 0xd97706, scale: 4.0, hp: 25000 }
 ];
 
 // ==========================================
@@ -854,7 +854,7 @@ function createBoss(lvl) {
     const theme = BOSS_THEMES[themeIdx];
     const group = new THREE.Group();
     const scale = theme.scale;
-    const maxHp = theme.hp + Math.floor((lvl - 1) / 10) * 1500;
+    const maxHp = theme.hp + Math.floor((lvl - 1) / 10) * 25000;
 
     const bodyMat = new THREE.MeshStandardMaterial({
         color: theme.color,

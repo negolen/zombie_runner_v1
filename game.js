@@ -245,13 +245,14 @@ const Game = {
         bulletCount: 1,     // Mermi sayısı (1, 2, 3, 4)
         damage: 15,         // Mermi hasarı
         bulletSpeed: 55,    // Mermi hızı
-        hearts: 4.0,        // Başlangıç canı: 4 kalp
+        hearts: 3.0,        // Başlangıç canı: 3 kalp
         maxHearts: 6.0,     // Cap: En fazla 6 kalp
         invulnerableTimer: 0,
         isShieldActive: false,
         shieldTimer: 0,
         shieldMesh: null,
         skill1Used: false,  // Meteor tur başına 1 kez
+        skill2Used: false,  // Valkyrie boss fight başına 1 kez
         skill3Cooldown: 0,  // Kalkan bekleme süresi
         limbs: {}
     },
@@ -617,8 +618,10 @@ function buildPlayer() {
 function setupLevel(lvl) {
     clearLevelEntities();
 
-    // Seviye Etiketi
+    // Seviye Etiketleri (hem ilerleme çubuğu hem sol üst köşe)
     document.getElementById('level-label').textContent = `BÖLÜM ${lvl}`;
+    const levelDisplay = document.getElementById('level-display');
+    if (levelDisplay) levelDisplay.textContent = `LV. ${lvl}`;
 
     // Kapı Sayısı: Minimum 7 Kapı, her 3 seviyede bir +1 yeni kapı!
     const gateCount = 7 + Math.floor((lvl - 1) / 3);
@@ -630,8 +633,9 @@ function setupLevel(lvl) {
     // Dünyayı dinamik uzunluğa göre oluştur
     buildWorld();
 
-    // Boss Skills Reset
+    // Boss Skills Reset (her level başında tümü sıfırlanır)
     Game.player.skill1Used = false;
+    Game.player.skill2Used = false;
     Game.player.skill3Cooldown = 0;
     Game.player.isShieldActive = false;
     Game.player.shieldTimer = 0;
@@ -686,13 +690,30 @@ function setupLevel(lvl) {
         createNoSkipGatePair(z, leftCfg, rightCfg);
     });
 
-    // ZOMBİLER (Tüm pist boyunca kapılar arasına yayılmış dalgalar)
+    // ZOMBİLER (Her kapının ÖNCESİNDE garantili mob + pist boyunca dalgalar)
     const hpMult = 1 + (lvl - 1) * 0.35;
+
+    // Her kapı öncesine garantili 2-3 zombi yerleştir
+    zPositions.forEach(z => {
+        const mobsBeforeGate = Math.floor(Math.random() * 2) + 2; // 2 veya 3
+        const spacing = (Game.trackWidth - 2.0) / mobsBeforeGate;
+        for (let i = 0; i < mobsBeforeGate; i++) {
+            const x = -((Game.trackWidth - 2.0) / 2) + i * spacing + (Math.random() * 0.5 - 0.25);
+            const zOffset = z + 12 + Math.random() * 5; // Kapıdan 12-17 birim önce
+            const rand = Math.random();
+            let type = 'normal';
+            if (rand > 0.82) type = 'tank';
+            else if (rand > 0.58) type = 'fast';
+            createZombie(x, zOffset, type, hpMult);
+        }
+    });
+
+    // Genel pist boyunca ek zombi dalgaları (kapılara çok yakın olmayan yerler)
     for (let z = -18; z > Game.bossArenaZ + 20; z -= 14) {
-        const nearGate = zPositions.some(gz => Math.abs(gz - z) < 7);
+        const nearGate = zPositions.some(gz => Math.abs(gz - z) < 15); // Kapı çevresini daha geniş tut
         if (nearGate) continue;
 
-        const count = Math.floor(Math.random() * 3) + 2;
+        const count = Math.floor(Math.random() * 3) + 1;
         const spacing = (Game.trackWidth - 2.5) / count;
 
         for (let i = 0; i < count; i++) {
@@ -701,7 +722,6 @@ function setupLevel(lvl) {
             let type = 'normal';
             if (rand > 0.8) type = 'tank';
             else if (rand > 0.55) type = 'fast';
-
             createZombie(x, z, type, hpMult);
         }
     }
@@ -1188,8 +1208,12 @@ function triggerSkill1() {
 
 function triggerSkill2() {
     if (Game.state !== GAME_STATE.BOSS_FIGHT) return;
+    if (Game.player.skill2Used) {
+        showBanner('👼 Valkyrie bu turda kullanıldı!', false);
+        return;
+    }
     if (Game.player.hearts >= 4.0) {
-        showBanner('Canınız zaten 4 veya daha fazla!');
+        showBanner('Canınız zaten 4 veya daha fazla!', false);
         return;
     }
 
@@ -1228,6 +1252,10 @@ function triggerSkill2() {
             createExplosion(p.x, 1.5, p.z, 0xfde047, 20);
         }
     });
+
+    Game.player.skill2Used = true;
+    const btn2 = document.getElementById('skill-2-btn');
+    if (btn2) btn2.classList.add('used');
 
     Game.player.hearts = 4.0;
     updateHeartsUI();
@@ -1324,10 +1352,15 @@ function updateSkillsUI() {
         btn1.classList.remove('used');
     }
 
-    if (p.hearts < 4.0) {
+    if (p.skill2Used) {
+        btn2.classList.add('used');
         btn2.classList.remove('disabled');
+    } else if (p.hearts < 4.0) {
+        btn2.classList.remove('disabled');
+        btn2.classList.remove('used');
     } else {
         btn2.classList.add('disabled');
+        btn2.classList.remove('used');
     }
 
     if (p.skill3Cooldown > 0 && !p.isShieldActive) {
@@ -1797,8 +1830,8 @@ function update(delta) {
         const distToBoss = Math.abs(p.z - bPos.z);
         if (!sw.hasHitPlayer && sw.currentRadius >= distToBoss - 1.0) {
             sw.hasHitPlayer = true;
-            takePlayerDamage(0.5);
-            showBanner('💥 KAÇILAMAZ ŞOK DALGASI! (-0.5 KALP)', false);
+            takePlayerDamage(1.0);
+            showBanner('💥 KAÇILAMAZ ŞOK DALGASI! (-1 KALP)', false);
         }
 
         if (sw.currentRadius >= sw.maxRadius) {
@@ -1929,7 +1962,9 @@ function resetGame(lvl) {
     p.fireInterval = 0.22;
     p.bulletCount = 1;
     p.damage = 15;
-    p.hearts = 4.0;
+    p.hearts = 3.0;
+    p.skill1Used = false;
+    p.skill2Used = false;
     p.mesh.visible = true;
 
     document.getElementById('gameover-screen').classList.add('hidden');

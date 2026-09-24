@@ -92,6 +92,16 @@ canvas {
     pointer-events: auto;
 }
 
+.level-box {
+    color: #38bdf8;
+    background: rgba(14, 165, 233, 0.2);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    font-weight: 900;
+    letter-spacing: 0.5px;
+    padding: 6px 12px;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
 .score-box {
     color: #fbbf24;
 }

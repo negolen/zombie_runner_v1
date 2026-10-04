@@ -334,9 +334,11 @@ function onWindowResize() {
     if (!container) return;
     const width = container.clientWidth;
     const height = container.clientHeight;
-    camera.aspect = width / height;
-    camera.updateProjectionMatrix();
-    renderer.setSize(width, height);
+    if (width > 0 && height > 0) {
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height);
+    }
 }
 
 // ==========================================
@@ -348,16 +350,18 @@ function setupControls() {
     const handlePointerDown = (e) => {
         if (Game.state !== GAME_STATE.PLAYING && Game.state !== GAME_STATE.BOSS_FIGHT) return;
         Game.isDragging = true;
-        Game.dragStartX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+        Game.dragStartX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
         Game.playerStartX = Game.player.targetX;
     };
 
     const handlePointerMove = (e) => {
         if (!Game.isDragging) return;
-        const currentX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+        const currentX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
         const diffX = currentX - Game.dragStartX;
         
-        const sensitivity = 0.022;
+        // Ekran genişliğine göre normalize edilmiş hassasiyet (tüm telefon ve ekranlarda aynı his)
+        const containerWidth = (container && container.clientWidth) ? container.clientWidth : 360;
+        const sensitivity = (Game.trackWidth / containerWidth) * 1.15;
         let newX = Game.playerStartX + diffX * sensitivity;
         
         const limit = (Game.trackWidth / 2) - 0.9;
@@ -375,6 +379,7 @@ function setupControls() {
     el.addEventListener('touchstart', handlePointerDown, { passive: true });
     window.addEventListener('touchmove', handlePointerMove, { passive: true });
     window.addEventListener('touchend', handlePointerUp, { passive: true });
+    window.addEventListener('orientationchange', () => setTimeout(onWindowResize, 150));
 
     // Klavye Yön Tuşları (Sol / Sağ Ok & A / D) ve Skill Tuşları (1, 2, 3)
     window.addEventListener('keydown', (e) => {

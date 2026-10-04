@@ -261,12 +261,16 @@ const Game = {
     bullets: [],
     enemies: [],
     gatePairs: [],
+    sawBlades: [],       // Seviye 5+ Döner Bıçaklar
+    barrels: [],         // Patlayan Neon Nitro Varilleri
+    damageNumbers: [],   // Uçuşan Hasar Rakamları
     drops: [],
     particles: [],
     bossProjectiles: [],
     shockwaves: [],
     activeAnimations: [],
     boss: null,
+    hitStopTimer: 0,     // Darbe vuruş duraksaması (hit-stop)
 
     // Dokunmatik & Klavye Kontrolü
     isDragging: false,
@@ -731,6 +735,25 @@ function setupLevel(lvl) {
         }
     }
 
+    // DÖNER BIÇAKLAR (Seviye 5 ve sonrasında aktifleşir, çarpışma 0.5 kalp götürür)
+    if (lvl >= 5) {
+        const sawCount = Math.min(6, 2 + Math.floor((lvl - 5) / 2));
+        const spacing = (Math.abs(Game.bossArenaZ) - 80) / sawCount;
+        for (let i = 0; i < sawCount; i++) {
+            const sz = -50 - i * spacing - (Math.random() * 8);
+            createSawBlade(sz);
+        }
+    }
+
+    // PATLAYAN NEON NITRO VARİLLERİ
+    const barrelCount = 3 + Math.floor(gateCount / 2);
+    const bSpacing = (Math.abs(Game.bossArenaZ) - 70) / barrelCount;
+    for (let i = 0; i < barrelCount; i++) {
+        const bz = -35 - i * bSpacing + (Math.random() * 6 - 3);
+        const bx = (Math.random() > 0.5 ? 1 : -1) * (1.2 + Math.random() * 1.8);
+        createExplosiveBarrel(bx, bz);
+    }
+
     // BOSS OLUŞTUR
     createBoss(lvl);
     updateHUDStats();
@@ -753,6 +776,15 @@ function clearLevelEntities() {
     });
     Game.gatePairs = [];
 
+    Game.sawBlades.forEach(sb => scene.remove(sb.mesh));
+    Game.sawBlades = [];
+
+    Game.barrels.forEach(br => scene.remove(br.mesh));
+    Game.barrels = [];
+
+    Game.damageNumbers.forEach(dn => scene.remove(dn.sprite));
+    Game.damageNumbers = [];
+
     Game.drops.forEach(d => scene.remove(d.mesh));
     Game.drops = [];
 
@@ -774,6 +806,153 @@ function clearLevelEntities() {
         scene.remove(Game.boss.mesh);
         Game.boss = null;
     }
+}
+
+// ==========================================
+// SEVİYE 5+ DÖNER BIÇAKLAR & PATLAYAN VARİLLER
+// ==========================================
+function createSawBlade(z) {
+    const group = new THREE.Group();
+
+    // Testere Gövdesi (Metalik Çark)
+    const bladeGeo = new THREE.CylinderGeometry(0.85, 0.85, 0.08, 16);
+    const bladeMat = new THREE.MeshStandardMaterial({
+        color: 0x94a3b8,
+        metalness: 0.9,
+        roughness: 0.2
+    });
+    const blade = new THREE.Mesh(bladeGeo, bladeMat);
+    blade.castShadow = true;
+    group.add(blade);
+
+    // Kırmızı Neon Dişler
+    const teethGeo = new THREE.RingGeometry(0.82, 0.98, 16);
+    const teethMat = new THREE.MeshBasicMaterial({
+        color: 0xef4444,
+        side: THREE.DoubleSide
+    });
+    const teeth = new THREE.Mesh(teethGeo, teethMat);
+    teeth.rotation.x = -Math.PI / 2;
+    teeth.position.y = 0.05;
+    group.add(teeth);
+
+    // Zemin bağlantısı
+    const standGeo = new THREE.BoxGeometry(0.3, 0.35, 0.3);
+    const standMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+    const stand = new THREE.Mesh(standGeo, standMat);
+    stand.position.y = -0.2;
+    group.add(stand);
+
+    group.position.set(0, 0.35, z);
+    scene.add(group);
+
+    Game.sawBlades.push({
+        mesh: group,
+        bladeMesh: blade,
+        teethMesh: teeth,
+        baseZ: z,
+        time: Math.random() * 10,
+        speed: 2.2 + Math.random() * 0.8,
+        radius: 0.95
+    });
+}
+
+function createExplosiveBarrel(x, z) {
+    const group = new THREE.Group();
+
+    const barrelGeo = new THREE.CylinderGeometry(0.45, 0.45, 0.9, 14);
+    const barrelMat = new THREE.MeshStandardMaterial({
+        color: 0xef4444,
+        emissive: 0x991b1b,
+        emissiveIntensity: 0.4,
+        roughness: 0.4,
+        metalness: 0.6
+    });
+    const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+    barrel.position.y = 0.45;
+    barrel.castShadow = true;
+    group.add(barrel);
+
+    const stripeGeo = new THREE.CylinderGeometry(0.46, 0.46, 0.12, 14);
+    const stripeMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+    const stripeTop = new THREE.Mesh(stripeGeo, stripeMat);
+    stripeTop.position.y = 0.72;
+    group.add(stripeTop);
+
+    const stripeBot = stripeTop.clone();
+    stripeBot.position.y = 0.18;
+    group.add(stripeBot);
+
+    group.position.set(x, 0, z);
+    scene.add(group);
+
+    Game.barrels.push({
+        mesh: group,
+        x: x,
+        z: z,
+        radius: 0.55
+    });
+}
+
+function explodeBarrel(barrel, index) {
+    sfx.playExplosion();
+    const bx = barrel.mesh.position.x;
+    const bz = barrel.mesh.position.z;
+
+    createExplosion(bx, 0.8, bz, 0xff5500, 25);
+    createFloatingText('💥 BOOM! +150', bx, 1.5, bz, '#f97316');
+
+    // Etraftaki zombileri temizle
+    for (let j = Game.enemies.length - 1; j >= 0; j--) {
+        const e = Game.enemies[j];
+        const dist = Math.sqrt((bx - e.mesh.position.x)**2 + (bz - e.mesh.position.z)**2);
+        if (dist <= 3.8) {
+            createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, e.originalColor);
+            scene.remove(e.mesh);
+            if (e.hpBarMesh) scene.remove(e.hpBarMesh);
+            Game.enemies.splice(j, 1);
+            Game.score += 50;
+        }
+    }
+
+    // Karakter çok yakınsa 0.5 kalp hasar
+    const pDist = Math.sqrt((Game.player.x - bx)**2 + (Game.player.z - bz)**2);
+    if (pDist < 1.4) {
+        takePlayerDamage(0.5);
+    }
+
+    Game.score += 150;
+    document.getElementById('score-text').textContent = Game.score;
+    scene.remove(barrel.mesh);
+    Game.barrels.splice(index, 1);
+}
+
+// Uçuşan Hasar ve Puan Yazıları
+function createFloatingText(text, x, y, z, color = '#ffffff') {
+    const canvas = document.createElement('canvas');
+    canvas.width = 180;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    ctx.font = 'bold 28px Arial';
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = '#000000';
+    ctx.shadowBlur = 6;
+    ctx.fillText(text, 90, 32);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const sprite = new THREE.Sprite(mat);
+    sprite.position.set(x, y, z);
+    sprite.scale.set(1.8, 0.65, 1);
+    scene.add(sprite);
+
+    Game.damageNumbers.push({
+        sprite: sprite,
+        vy: 2.2,
+        life: 0.7
+    });
 }
 
 // ==========================================
@@ -1086,6 +1265,13 @@ function createBoss(lvl) {
     rightLegPivot.add(rightLeg);
     group.add(rightLegPivot);
 
+    // Kritik Zayıf Nokta (Neon Core Çekirdeği)
+    const coreGeo = new THREE.OctahedronGeometry(0.28 * scale);
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xfacc15 });
+    const core = new THREE.Mesh(coreGeo, coreMat);
+    core.position.set(0, 1.15 * scale, 0.38 * scale);
+    group.add(core);
+
     group.position.set(0, 0, Game.bossArenaZ - 4);
     scene.add(group);
 
@@ -1093,6 +1279,7 @@ function createBoss(lvl) {
 
     Game.boss = {
         mesh: group,
+        weakspotMesh: core,
         bodyMat: bodyMat,
         theme: theme,
         maxHp: maxHp,
@@ -1205,7 +1392,9 @@ function triggerSkill1() {
             const dmg = Math.round(Game.boss.maxHp * 0.25);
             Game.boss.hp -= dmg;
             updateBossHUD();
+            Game.hitStopTimer = 0.055;
             createExplosion(bPos.x, 2.5, bPos.z, 0xff4400, 35);
+            createFloatingText(`💥 -${dmg}`, bPos.x, 3.2, bPos.z, '#ef4444');
             if (Game.boss.hp <= 0) triggerVictory();
         }
     });
@@ -1479,6 +1668,12 @@ function updateHUDStats() {
 function update(delta) {
     if (Game.state !== GAME_STATE.PLAYING && Game.state !== GAME_STATE.BOSS_FIGHT) return;
 
+    // Hit-stop duraksaması (darbe anı fiziksel ağırlık hissi)
+    if (Game.hitStopTimer > 0) {
+        Game.hitStopTimer -= delta;
+        return;
+    }
+
     const p = Game.player;
 
     // Dokunulmazlık Sayaç Güncellemesi
@@ -1561,6 +1756,22 @@ function update(delta) {
 
         let bulletRemoved = false;
 
+        // Patlayan Neon Varilleri ile Çarpışma
+        for (let k = Game.barrels.length - 1; k >= 0; k--) {
+            const br = Game.barrels[k];
+            const dist = Math.sqrt((b.x - br.x)**2 + (b.z - br.z)**2);
+            if (dist < br.radius + 0.35) {
+                scene.remove(b.mesh);
+                Game.bullets.splice(i, 1);
+                bulletRemoved = true;
+                explodeBarrel(br, k);
+                Game.hitStopTimer = 0.04;
+                break;
+            }
+        }
+
+        if (bulletRemoved) continue;
+
         // Zombilerle Çarpışma
         for (let j = Game.enemies.length - 1; j >= 0; j--) {
             const e = Game.enemies[j];
@@ -1585,6 +1796,7 @@ function update(delta) {
 
                 if (e.hp <= 0) {
                     createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, e.originalColor);
+                    createFloatingText('+50', e.mesh.position.x, 1.8, e.mesh.position.z, '#22c55e');
                     scene.remove(e.mesh);
                     if (e.hpBarMesh) scene.remove(e.hpBarMesh);
 
@@ -1616,7 +1828,20 @@ function update(delta) {
 
             if (bdist < boss.radius + 0.4) {
                 sfx.playHit();
-                boss.hp -= b.damage;
+
+                // Kritik Zayıf Nokta (Neon Core) Kontrolü
+                const isWeakspot = Math.abs(bdx) < 0.65;
+                let finalDamage = b.damage;
+                if (isWeakspot) {
+                    finalDamage = Math.round(b.damage * 2.5);
+                    createExplosion(boss.mesh.position.x, 2.0 * boss.scale, boss.mesh.position.z, 0xfacc15, 12);
+                    createFloatingText(`CRIT! -${finalDamage}`, boss.mesh.position.x, 2.8 * boss.scale, boss.mesh.position.z, '#facc15');
+                    sfx.playPowerup();
+                } else {
+                    createFloatingText(`-${finalDamage}`, boss.mesh.position.x + (Math.random()-0.5)*0.8, 2.2 * boss.scale, boss.mesh.position.z, '#ffffff');
+                }
+
+                boss.hp -= finalDamage;
                 updateBossHUD();
 
                 boss.bodyMat.color.setHex(0xffffff);
@@ -1743,11 +1968,64 @@ function update(delta) {
         }
     }
 
+    // DÖNER BIÇAKLAR (Seviye 5+ Çarpışma: 0.5 Kalp Hasar)
+    for (let i = 0; i < Game.sawBlades.length; i++) {
+        const sb = Game.sawBlades[i];
+        sb.time += delta;
+        const currentX = Math.sin(sb.time * sb.speed) * (Game.trackWidth / 2 - 1.2);
+        sb.mesh.position.x = currentX;
+        sb.bladeMesh.rotation.y += delta * 25;
+        sb.teethMesh.rotation.z += delta * 25;
+
+        // Karakterle Çarpışma
+        const dx = p.x - currentX;
+        const dz = p.z - sb.baseZ;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+
+        if (dist < 1.15) {
+            if (p.invulnerableTimer <= 0) {
+                createExplosion(currentX, 0.5, sb.baseZ, 0xef4444, 14);
+                takePlayerDamage(0.5); // Yarım kalp götürür
+                showBanner('⚠️ DÖNER BIÇAK! (-0.5 KALP)', false);
+            }
+        }
+    }
+
+    // Patlayan Varillerle Karakter Teması
+    for (let i = Game.barrels.length - 1; i >= 0; i--) {
+        const br = Game.barrels[i];
+        const pDist = Math.sqrt((p.x - br.x)**2 + (p.z - br.z)**2);
+        if (pDist < 0.95) {
+            explodeBarrel(br, i);
+            break;
+        }
+    }
+
+    // Uçuşan Hasar Rakamları Güncelleme
+    for (let i = Game.damageNumbers.length - 1; i >= 0; i--) {
+        const dn = Game.damageNumbers[i];
+        dn.life -= delta;
+        dn.sprite.position.y += dn.vy * delta;
+        dn.sprite.material.opacity = Math.max(0, dn.life / 0.7);
+        if (dn.life <= 0) {
+            scene.remove(dn.sprite);
+            Game.damageNumbers.splice(i, 1);
+        }
+    }
+
     // BOSS HAREKETİ & CANLI ANİMASYONLARI
     if (Game.boss && Game.boss.active) {
         const boss = Game.boss;
         boss.walkTime = (boss.walkTime || 0) + delta * 4.5;
         boss.strafeTimer = (boss.strafeTimer || 0) + delta;
+
+        // Boss Zayıf Nokta (Neon Core) Hareketi & Parıltısı
+        if (boss.weakspotMesh) {
+            boss.weakspotMesh.rotation.y += delta * 4;
+            boss.weakspotMesh.rotation.z += delta * 3;
+            const pulse = (0.28 + Math.sin(clock.getElapsedTime() * 8) * 0.06) * boss.scale;
+            boss.weakspotMesh.scale.set(pulse, pulse, pulse);
+        }
 
         // Arena içi dinamik manevra & oyuncu takibi
         if (boss.strafeTimer > 2.2) {

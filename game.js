@@ -711,8 +711,10 @@ function setupLevel(lvl) {
             const zOffset = z + 12 + Math.random() * 5; // Kapıdan 12-17 birim önce
             const rand = Math.random();
             let type = 'normal';
-            if (rand > 0.82) type = 'tank';
-            else if (rand > 0.58) type = 'fast';
+            if (rand > 0.85) type = 'tank';
+            else if (rand > 0.70) type = 'shield';
+            else if (rand > 0.52) type = 'boomer';
+            else if (rand > 0.32) type = 'fast';
             createZombie(x, zOffset, type, hpMult);
         }
     });
@@ -729,8 +731,10 @@ function setupLevel(lvl) {
             const x = -((Game.trackWidth - 2.5) / 2) + i * spacing + (Math.random() * 0.4 - 0.2);
             const rand = Math.random();
             let type = 'normal';
-            if (rand > 0.8) type = 'tank';
-            else if (rand > 0.55) type = 'fast';
+            if (rand > 0.85) type = 'tank';
+            else if (rand > 0.70) type = 'shield';
+            else if (rand > 0.52) type = 'boomer';
+            else if (rand > 0.32) type = 'fast';
             createZombie(x, z, type, hpMult);
         }
     }
@@ -1044,6 +1048,8 @@ function createZombie(x, z, type, hpMult) {
     let speed = 2.2;
     let color = 0x22c55e;
     let scale = 1.0;
+    let shieldMesh = null;
+    let shieldHp = 0;
 
     if (type === 'fast') {
         hp = 20;
@@ -1055,23 +1061,71 @@ function createZombie(x, z, type, hpMult) {
         speed = 1.1;
         color = 0x7c3aed;
         scale = 1.6;
+    } else if (type === 'boomer') {
+        hp = 45;
+        speed = 2.4;
+        color = 0x10b981;
+        scale = 1.15;
+    } else if (type === 'shield') {
+        hp = 70;
+        speed = 1.6;
+        color = 0x475569;
+        scale = 1.15;
+        shieldHp = Math.round(50 * hpMult);
     }
 
     hp = Math.round(hp * hpMult);
 
-    const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7 });
+    const bodyMat = new THREE.MeshStandardMaterial({
+        color: color,
+        roughness: 0.7,
+        emissive: type === 'boomer' ? 0x059669 : 0x000000,
+        emissiveIntensity: type === 'boomer' ? 0.4 : 0
+    });
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.7 * scale, 0.9 * scale, 0.4 * scale), bodyMat);
     body.position.y = 0.9 * scale;
     body.castShadow = true;
     group.add(body);
 
-    const headMat = new THREE.MeshStandardMaterial({ color: 0x15803d });
+    // Boomer için patlayıcı yeşil göbek çekirdeği
+    if (type === 'boomer') {
+        const bellyGeo = new THREE.SphereGeometry(0.32 * scale, 8, 8);
+        const bellyMat = new THREE.MeshBasicMaterial({ color: 0x84cc16 });
+        const belly = new THREE.Mesh(bellyGeo, bellyMat);
+        belly.position.set(0, 0.85 * scale, 0.22 * scale);
+        group.add(belly);
+    }
+
+    // Shield zombi için çelik çevik kuvvet kalkanı
+    if (type === 'shield') {
+        const shieldGroup = new THREE.Group();
+        const sGeo = new THREE.BoxGeometry(0.85 * scale, 1.15 * scale, 0.12 * scale);
+        const sMat = new THREE.MeshStandardMaterial({
+            color: 0x334155,
+            metalness: 0.85,
+            roughness: 0.25
+        });
+        const sMesh = new THREE.Mesh(sGeo, sMat);
+        shieldGroup.add(sMesh);
+
+        const stripeGeo = new THREE.BoxGeometry(0.86 * scale, 0.18 * scale, 0.13 * scale);
+        const stripeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+        const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+        stripe.position.y = 0.2 * scale;
+        shieldGroup.add(stripe);
+
+        shieldGroup.position.set(0, 0.9 * scale, 0.38 * scale);
+        group.add(shieldGroup);
+        shieldMesh = shieldGroup;
+    }
+
+    const headMat = new THREE.MeshStandardMaterial({ color: type === 'boomer' ? 0x10b981 : 0x15803d });
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.5 * scale, 0.5 * scale), headMat);
     head.position.y = 1.6 * scale;
     head.castShadow = true;
     group.add(head);
 
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+    const eyeMat = new THREE.MeshBasicMaterial({ color: type === 'boomer' ? 0xfacc15 : 0xef4444 });
     const eye1 = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.08 * scale, 0.08 * scale), eyeMat);
     eye1.position.set(-0.13 * scale, 1.65 * scale, 0.25 * scale);
     const eye2 = eye1.clone();
@@ -1105,7 +1159,9 @@ function createZombie(x, z, type, hpMult) {
         originalColor: color,
         scale: scale,
         radius: 0.6 * scale,
-        animTime: Math.random() * 10
+        animTime: Math.random() * 10,
+        shieldMesh: shieldMesh,
+        shieldHp: shieldHp
     });
 }
 
@@ -1780,6 +1836,22 @@ function update(delta) {
             const dist = Math.sqrt(dx * dx + dz * dz);
 
             if (dist < e.radius + 0.3) {
+                // Kalkanlı Zombi ön koruma kontrolü
+                if (e.type === 'shield' && Math.abs(dx) < 0.36 && e.shieldHp > 0) {
+                    e.shieldHp -= b.damage;
+                    createExplosion(b.x, 1.0 * e.scale, b.z, 0x38bdf8, 8);
+                    createFloatingText('🛡️ BLOK!', e.mesh.position.x, 2.0 * e.scale, e.mesh.position.z, '#38bdf8');
+                    sfx.playHit();
+                    if (e.shieldHp <= 0) {
+                        if (e.shieldMesh) e.mesh.remove(e.shieldMesh);
+                        createFloatingText('💥 KALKAN KIRILDI!', e.mesh.position.x, 2.4 * e.scale, e.mesh.position.z, '#facc15');
+                    }
+                    scene.remove(b.mesh);
+                    Game.bullets.splice(i, 1);
+                    bulletRemoved = true;
+                    break;
+                }
+
                 sfx.playHit();
                 e.hp -= b.damage;
 
@@ -1796,7 +1868,39 @@ function update(delta) {
 
                 if (e.hp <= 0) {
                     createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, e.originalColor);
-                    createFloatingText('+50', e.mesh.position.x, 1.8, e.mesh.position.z, '#22c55e');
+
+                    // Toxic Boomer zincirleme patlama mekaniği
+                    if (e.type === 'boomer') {
+                        sfx.playExplosion();
+                        createExplosion(e.mesh.position.x, 1.2, e.mesh.position.z, 0x10b981, 28);
+                        createFloatingText('☣️ TOXIC BLAST! +100', e.mesh.position.x, 2.2, e.mesh.position.z, '#10b981');
+                        Game.score += 50;
+
+                        // Çevredeki zombileri zincirleme patlat
+                        for (let k = Game.enemies.length - 1; k >= 0; k--) {
+                            const other = Game.enemies[k];
+                            if (other === e) continue;
+                            const dBoomer = Math.sqrt((other.mesh.position.x - e.mesh.position.x)**2 + (other.mesh.position.z - e.mesh.position.z)**2);
+                            if (dBoomer <= 3.6) {
+                                other.hp -= 80;
+                                createExplosion(other.mesh.position.x, 0.8, other.mesh.position.z, 0x22c55e, 10);
+                                if (other.hpBarMesh) {
+                                    const oPct = Math.max(0, other.hp / other.maxHp);
+                                    other.hpBarMesh.fillMesh.scale.x = oPct;
+                                    other.hpBarMesh.fillMesh.position.x = -other.hpBarMesh.maxWidth * (1 - oPct) / 2;
+                                }
+                                if (other.hp <= 0) {
+                                    scene.remove(other.mesh);
+                                    if (other.hpBarMesh) scene.remove(other.hpBarMesh);
+                                    Game.enemies.splice(k, 1);
+                                    Game.score += 50;
+                                }
+                            }
+                        }
+                    } else {
+                        createFloatingText('+50', e.mesh.position.x, 1.8, e.mesh.position.z, '#22c55e');
+                    }
+
                     scene.remove(e.mesh);
                     if (e.hpBarMesh) scene.remove(e.hpBarMesh);
 

@@ -19,6 +19,7 @@
 ## 3. Tehlikeler & Çevre Etkileşimi
 * **Döner Bıçaklar (Seviye 5+):** Pistte salınan testereler. Değdiğinde **0.5 Kalp** götürür.
 * **Patlayan Neon Variller:** Vurulduğunda çevredeki zombileri yok eder (+150 puan). Yakın temas 0.5 kalp hasar verir.
+* **Kaçak Siber Dronlar (Bounty Targets):** Havada uçan altın halkalı dronlar; vurulduğunda +300 bonus puan ve garantili eşya düşürür.
 
 ## 4. Boss Sistemi & 3 Özel Skill
 * **10 Temalı Boss:** Eklemli titan modeller, yürüyüş & strafe fiziği, şok dalgası ve füze saldırısı.
@@ -28,6 +29,7 @@
   2. *Valkyrie (2):* Can < 4 ise 4 kalbe tamamlar (Fight başına 1x).
   3. *Kalkan (3):* 2s %50 hasar azaltma (8s cooldown).
 
-## 5. Vuruş Hissiyatı (Juice) & Kontroller
+## 5. Rekabetçi Mekanikler & Kontroller
+* **Near-Miss (Teğet Geçiş):** Zombilerin yanından sıfıra yakın geçildiğinde kombo çarpanı katlanır (x1 -> x5, 4 saniye süre).
 * **Hit-Stop & Uçuşan Rakamlar:** Meteor/varil patlamalarında 0.05s duraksama, kritiklerde (`CRIT!`) 3D metinler.
 * **Kontroller:** Mobil: Dokunmatik sürükleme. Masaüstü: Fare sürükleme, Ok tuşları / AD, Yetenekler: 1, 2, 3.

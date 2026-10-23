@@ -213,7 +213,7 @@ const BOSS_THEMES = [
 // ==========================================
 // OYUN DURUMU & DEĞİŞKENLERİ
 // ==========================================
-const GAME_STATE = { MENU: 0, PLAYING: 1, BOSS_FIGHT: 2, VICTORY: 3, GAMEOVER: 4 };
+const GAME_STATE = { MENU: 0, PLAYING: 1, BOSS_FIGHT: 2, VICTORY: 3, GAMEOVER: 4, PAUSED: 5 };
 
 const Game = {
     state: GAME_STATE.MENU,
@@ -265,7 +265,9 @@ const Game = {
     isDragging: false,
     dragStartX: 0,
     playerStartX: 0,
-    keys: { left: false, right: false }
+    keys: { left: false, right: false },
+    _prevState: GAME_STATE.PLAYING,
+    lang: 'tr'
 };
 
 // DOM Referans Önbelleği (Layout thrashing & tekrarlı sorgu önleme)
@@ -456,6 +458,10 @@ function initThree() {
     DOM.victoryScore = document.getElementById('victory-score');
     DOM.muteIcon = document.getElementById('mute-icon');
 
+    // Yüklü dil ayarını uygula
+    const savedLang = localStorage.getItem('zr3d_lang') || 'tr';
+    setLang(savedLang);
+
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x15122e);
     scene.fog = new THREE.FogExp2(0x15122e, 0.008);
@@ -517,6 +523,8 @@ function setupControls() {
 
     const handlePointerDown = (e) => {
         if (Game.state !== GAME_STATE.PLAYING && Game.state !== GAME_STATE.BOSS_FIGHT) return;
+        // Skill butonu veya pause butonu tıklamalarında sürükleme başlatma
+        if (e.target && e.target.closest('.skill-btn, #pause-btn, #mute-btn')) return;
         Game.isDragging = true;
         Game.dragStartX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
         Game.playerStartX = Game.player.targetX;
@@ -588,6 +596,34 @@ function setupControls() {
     DOM.skill1Btn.addEventListener('click', triggerSkill1);
     DOM.skill2Btn.addEventListener('click', triggerSkill2);
     DOM.skill3Btn.addEventListener('click', triggerSkill3);
+
+    // Skill butonları için ayrı touch handler (boss fight'ta kaydırma bozulmasın)
+    [DOM.skill1Btn, DOM.skill2Btn, DOM.skill3Btn].forEach((btn, idx) => {
+        btn.addEventListener('touchstart', (e) => {
+            e.stopPropagation(); // üst div'e touchstart gitmesin
+        }, { passive: true });
+        btn.addEventListener('touchend', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            if (idx === 0) triggerSkill1();
+            else if (idx === 1) triggerSkill2();
+            else triggerSkill3();
+        }, { passive: false });
+    });
+
+    // Pause / Menü butonları
+    document.getElementById('pause-btn').addEventListener('click', () => openPauseMenu());
+    document.getElementById('resume-btn').addEventListener('click', () => closePauseMenu());
+    document.getElementById('restart-from-menu-btn').addEventListener('click', () => {
+        closePauseMenuImmediate();
+        resetGame(Game.level);
+    });
+    document.getElementById('leaderboard-btn').addEventListener('click', () => openLeaderboard());
+    document.getElementById('close-leaderboard-btn').addEventListener('click', () => closeLeaderboard());
+    document.getElementById('lang-tr-btn').addEventListener('click', () => setLang('tr'));
+    document.getElementById('lang-en-btn').addEventListener('click', () => setLang('en'));
+    document.getElementById('toggle-sfx-btn').addEventListener('click', () => toggleSfx());
+    document.getElementById('toggle-bgm-btn').addEventListener('click', () => toggleBgm());
 }
 
 // ==========================================
@@ -1091,12 +1127,22 @@ function buildGateMesh(w, h, info) {
     canvas.width = 256;
     canvas.height = 128;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = info.isPos ? '#00e5ff' : '#ff4444';
-    ctx.font = 'bold 36px Arial';
+    // Arka plan — hafif renk tonu
+    ctx.fillStyle = info.isPos ? 'rgba(0,50,80,0.65)' : 'rgba(80,0,0,0.65)';
+    ctx.roundRect(4, 4, 248, 120, 14);
+    ctx.fill();
+    // Yazı — her zaman beyaz + siyah stroke (okunabilir)
+    ctx.font = 'bold 34px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = '#000';
-    ctx.shadowBlur = 8;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 7;
+    ctx.shadowColor = '#000000';
+    ctx.shadowBlur = 14;
+    ctx.strokeText(info.label, 128, 64);
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = info.isPos ? '#00f2fe' : '#ff6060';
+    ctx.shadowBlur = 10;
     ctx.fillText(info.label, 128, 64);
 
     const textTexture = new THREE.CanvasTexture(canvas);
@@ -1865,6 +1911,8 @@ function update(delta) {
                                     scene.remove(other.mesh);
                                     if (other.hpBarMesh) scene.remove(other.hpBarMesh);
                                     Game.enemies.splice(k, 1);
+                                    // k < j olduğunda j'yi kaydır
+                                    if (k < j) j--;
                                     Game.score += 50;
                                 }
                             }
@@ -2254,6 +2302,8 @@ function triggerVictory() {
     Game.score += 1000 * Game.level;
     DOM.victoryScore.textContent = Game.score;
 
+    saveScore(Game.score, Game.level);
+
     setTimeout(() => {
         DOM.bossHud.classList.add('hidden');
         DOM.bossSkillsBar.classList.add('hidden');
@@ -2269,6 +2319,8 @@ function triggerGameOver() {
     Game.player.mesh.visible = false;
 
     DOM.gameoverScore.textContent = Game.score;
+
+    saveScore(Game.score, Game.level);
 
     setTimeout(() => {
         DOM.bossHud.classList.add('hidden');
@@ -2305,6 +2357,227 @@ function resetGame(lvl) {
     DOM.bossSkillsBar.classList.add('hidden');
 
     setupLevel(lvl);
+}
+
+// ==========================================
+// PAUSE MENÜ & LEADERBOARD & i18n
+// ==========================================
+
+const LANG = {
+    tr: {
+        pauseTitle: '⏸️ MENÜ',
+        statScore: 'Skor',
+        statHigh: 'En Yüksek',
+        statLvl: 'Seviye',
+        sfxOn: 'AÇ', sfxOff: 'KAPAT',
+        bgmOn: 'AÇ', bgmOff: 'KAPAT',
+        resumeBtn: '▶️ OYUNA DEVAM ET',
+        leaderboardBtn: '🏆 SKOR TABELASI',
+        restartBtn: '🔄 YENİDEN BAŞLAT',
+        leadTitle: '🏆 SKOR TABELASI',
+        leadClose: '⬅️ GERİ DÖN',
+        leadEmpty: 'Henüz kayıtlı skor yok.',
+        victoryTitle: 'TEBRİKLER! 🎉',
+        victoryDesc: "Bölüm Sonu Boss'unu Başarıyla Yıktın!",
+        victoryScoreLabel: 'Toplam Skor:',
+        nextBtn: 'SONRAKİ BÖLÜM',
+        lvlLabel: (n) => `BÖLÜM ${n}`,
+        countdown3: '3', countdown2: '2', countdown1: '1',
+    },
+    en: {
+        pauseTitle: '⏸️ MENU',
+        statScore: 'Score',
+        statHigh: 'Best',
+        statLvl: 'Level',
+        sfxOn: 'ON', sfxOff: 'OFF',
+        bgmOn: 'ON', bgmOff: 'OFF',
+        resumeBtn: '▶️ RESUME',
+        leaderboardBtn: '🏆 LEADERBOARD',
+        restartBtn: '🔄 RESTART',
+        leadTitle: '🏆 LEADERBOARD',
+        leadClose: '⬅️ BACK',
+        leadEmpty: 'No scores yet.',
+        victoryTitle: 'WELL DONE! 🎉',
+        victoryDesc: 'You defeated the Boss!',
+        victoryScoreLabel: 'Total Score:',
+        nextBtn: 'NEXT LEVEL',
+        lvlLabel: (n) => `LEVEL ${n}`,
+        countdown3: '3', countdown2: '2', countdown1: '1',
+    }
+};
+
+function setLang(lang) {
+    Game.lang = lang;
+    const L = LANG[lang];
+
+    document.getElementById('lang-tr-btn').classList.toggle('active', lang === 'tr');
+    document.getElementById('lang-en-btn').classList.toggle('active', lang === 'en');
+
+    document.getElementById('txt-pause-title').textContent = L.pauseTitle;
+    document.getElementById('txt-stat-score').textContent = L.statScore;
+    document.getElementById('txt-stat-high').textContent = L.statHigh;
+    document.getElementById('txt-stat-lvl').textContent = L.statLvl;
+    document.getElementById('txt-resume-btn').textContent = L.resumeBtn;
+    document.getElementById('txt-leaderboard-btn').textContent = L.leaderboardBtn;
+    document.getElementById('txt-restart-btn').textContent = L.restartBtn;
+    document.getElementById('txt-lead-title').textContent = L.leadTitle;
+    document.getElementById('txt-lead-close').textContent = L.leadClose;
+    document.getElementById('txt-victory-title').textContent = L.victoryTitle;
+    document.getElementById('txt-victory-desc').textContent = L.victoryDesc;
+    document.getElementById('txt-victory-score-label').textContent = L.victoryScoreLabel;
+    document.getElementById('txt-next-btn').textContent = L.nextBtn;
+
+    localStorage.setItem('zr3d_lang', lang);
+}
+
+// --------- LEADERBOARD ---------
+const LB_KEY = 'zr3d_leaderboard';
+
+function saveScore(score, level) {
+    if (!score) return;
+    let lb = JSON.parse(localStorage.getItem(LB_KEY) || '[]');
+    lb.push({ score, level, date: new Date().toLocaleDateString() });
+    lb.sort((a, b) => b.score - a.score);
+    lb = lb.slice(0, 10);
+    localStorage.setItem(LB_KEY, JSON.stringify(lb));
+    localStorage.setItem('zr3d_highscore', lb[0].score);
+}
+
+function getHighscore() {
+    return parseInt(localStorage.getItem('zr3d_highscore') || '0');
+}
+
+function openLeaderboard() {
+    const lb = JSON.parse(localStorage.getItem(LB_KEY) || '[]');
+    const list = document.getElementById('leaderboard-list');
+    const L = LANG[Game.lang];
+    list.innerHTML = '';
+
+    if (lb.length === 0) {
+        list.innerHTML = `<p style="color:#94a3b8;text-align:center;padding:20px;">${L.leadEmpty}</p>`;
+    } else {
+        const medals = ['🥇','🥈','🥉'];
+        lb.forEach((entry, i) => {
+            const row = document.createElement('div');
+            row.className = `lb-row${i < 3 ? ' top' + (i+1) : ''}`;
+            row.innerHTML = `
+                <span class="lb-rank">${medals[i] || (i + 1)}</span>
+                <span class="lb-score">${entry.score.toLocaleString()}</span>
+                <span class="lb-meta">Lv.${entry.level}<br>${entry.date}</span>
+            `;
+            list.appendChild(row);
+        });
+    }
+
+    document.getElementById('pause-modal').classList.add('hidden');
+    document.getElementById('leaderboard-modal').classList.remove('hidden');
+}
+
+function closeLeaderboard() {
+    document.getElementById('leaderboard-modal').classList.add('hidden');
+    document.getElementById('pause-modal').classList.remove('hidden');
+}
+
+// --------- SFX / BGM TOGGLES ---------
+let _sfxEnabled = true;
+let _bgmEnabled = true;
+
+function toggleSfx() {
+    _sfxEnabled = !_sfxEnabled;
+    const L = LANG[Game.lang];
+    const btn = document.getElementById('toggle-sfx-btn');
+    const txt = document.getElementById('sfx-status-text');
+    txt.textContent = _sfxEnabled ? L.sfxOn : L.sfxOff;
+    btn.classList.toggle('muted', !_sfxEnabled);
+    // sfx objesi mute toggle
+    if (_sfxEnabled) {
+        sfx.init();
+        if (sfx._gainNode) sfx._gainNode.gain.value = sfx._muted ? 0 : 0.4;
+    } else {
+        if (sfx._gainNode) sfx._gainNode.gain.value = 0;
+    }
+}
+
+function toggleBgm() {
+    _bgmEnabled = !_bgmEnabled;
+    const L = LANG[Game.lang];
+    const btn = document.getElementById('toggle-bgm-btn');
+    const txt = document.getElementById('bgm-status-text');
+    txt.textContent = _bgmEnabled ? L.bgmOn : L.bgmOff;
+    btn.classList.toggle('muted', !_bgmEnabled);
+}
+
+// --------- PAUSE / RESUME ---------
+function openPauseMenu() {
+    if (Game.state === GAME_STATE.MENU ||
+        Game.state === GAME_STATE.VICTORY ||
+        Game.state === GAME_STATE.GAMEOVER) return;
+
+    Game._prevState = Game.state;
+    Game.state = GAME_STATE.PAUSED;
+    Game.isDragging = false;
+
+    // Stats doldur
+    document.getElementById('pause-score-val').textContent = Game.score.toLocaleString();
+    document.getElementById('pause-high-val').textContent = getHighscore().toLocaleString();
+    document.getElementById('pause-lvl-val').textContent = Game.level;
+
+    // SFX/BGM durumları
+    const L = LANG[Game.lang];
+    document.getElementById('sfx-status-text').textContent = _sfxEnabled ? L.sfxOn : L.sfxOff;
+    document.getElementById('bgm-status-text').textContent = _bgmEnabled ? L.bgmOn : L.bgmOff;
+
+    document.getElementById('pause-modal').classList.remove('hidden');
+}
+
+function closePauseMenuImmediate() {
+    document.getElementById('pause-modal').classList.add('hidden');
+    document.getElementById('leaderboard-modal').classList.add('hidden');
+    if (Game.state === GAME_STATE.PAUSED) {
+        Game.state = Game._prevState;
+    }
+}
+
+function closePauseMenu() {
+    document.getElementById('pause-modal').classList.add('hidden');
+    document.getElementById('leaderboard-modal').classList.add('hidden');
+    startCountdown(() => {
+        if (Game.state === GAME_STATE.PAUSED) {
+            Game.state = Game._prevState;
+        }
+    });
+}
+
+function startCountdown(onDone) {
+    // Var olan overlay'i temizle
+    const existing = document.getElementById('countdown-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'countdown-overlay';
+    overlay.innerHTML = '<span id="countdown-num">3</span>';
+    document.getElementById('game-container').appendChild(overlay);
+
+    const nums = ['3', '2', '1'];
+    let i = 0;
+    const numEl = overlay.querySelector('#countdown-num');
+
+    const tick = () => {
+        numEl.textContent = nums[i];
+        numEl.style.animation = 'none';
+        void numEl.offsetWidth; // reflow
+        numEl.style.animation = 'countPulse 0.9s ease-out forwards';
+        i++;
+        if (i < nums.length) {
+            setTimeout(tick, 920);
+        } else {
+            setTimeout(() => {
+                overlay.remove();
+                onDone();
+            }, 920);
+        }
+    };
+    tick();
 }
 
 // ==========================================

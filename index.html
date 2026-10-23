@@ -49,6 +49,10 @@
                     <div class="hud-box mute-box" id="mute-btn" title="Sesi Aç/Kapat">
                         <span id="mute-icon">🔊</span>
                     </div>
+
+                    <div class="hud-box menu-box" id="pause-btn" title="Menü / Ayarlar">
+                        <span id="pause-icon">⚙️</span>
+                    </div>
                 </div>
 
                 <!-- Kalp Göstergesi (Can Sistemi: Başlangıç 4, Cap 6) -->
@@ -155,13 +159,77 @@
         <!-- Zafer (Victory) Ekranı -->
         <div id="victory-screen" class="overlay-screen hidden">
             <div class="overlay-content">
-                <h2 class="result-title win">TEBRİKLER! 🎉</h2>
-                <p class="result-desc">Bölüm Sonu Boss'unu Başarıyla Yıktın!</p>
+                <h2 class="result-title win" id="txt-victory-title">TEBRİKLER! 🎉</h2>
+                <p class="result-desc" id="txt-victory-desc">Bölüm Sonu Boss'unu Başarıyla Yıktın!</p>
                 <div class="final-score-box">
-                    <span>Toplam Skor:</span>
+                    <span id="txt-victory-score-label">Toplam Skor:</span>
                     <h3 id="victory-score">0</h3>
                 </div>
-                <button id="next-btn" class="primary-btn pulse-anim">SONRAKİ BÖLÜM</button>
+                <button id="next-btn" class="primary-btn pulse-anim">
+                    <span id="txt-next-btn">SONRAKİ BÖLÜM</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Menü / Duraklatma Pop-Up Ekranı -->
+        <div id="pause-modal" class="overlay-screen hidden">
+            <div class="overlay-content menu-modal-content">
+                <div class="menu-header-bar">
+                    <h2 class="menu-modal-title" id="txt-pause-title">⏸️ MENÜ</h2>
+                    <div class="lang-toggle-group">
+                        <button class="lang-btn active" id="lang-tr-btn">TR 🇹🇷</button>
+                        <button class="lang-btn" id="lang-en-btn">EN 🇬🇧</button>
+                    </div>
+                </div>
+
+                <div class="menu-stats-grid">
+                    <div class="menu-stat-card">
+                        <span class="m-stat-label" id="txt-stat-score">Skor</span>
+                        <span class="m-stat-val" id="pause-score-val">0</span>
+                    </div>
+                    <div class="menu-stat-card highlight">
+                        <span class="m-stat-label" id="txt-stat-high">En Yüksek</span>
+                        <span class="m-stat-val" id="pause-high-val">0</span>
+                    </div>
+                    <div class="menu-stat-card">
+                        <span class="m-stat-label" id="txt-stat-lvl">Seviye</span>
+                        <span class="m-stat-val" id="pause-lvl-val">1</span>
+                    </div>
+                </div>
+
+                <div class="menu-audio-group">
+                    <button class="setting-toggle-btn" id="toggle-sfx-btn">
+                        <span>💥 SFX: <b id="sfx-status-text">AÇIK</b></span>
+                    </button>
+                    <button class="setting-toggle-btn" id="toggle-bgm-btn">
+                        <span>🎵 MÜZİK: <b id="bgm-status-text">AÇIK</b></span>
+                    </button>
+                </div>
+
+                <div class="menu-actions">
+                    <button id="resume-btn" class="primary-btn pulse-anim" style="margin-bottom: 8px;">
+                        <span id="txt-resume-btn">▶️ OYUNA DEVAM ET</span>
+                    </button>
+                    <button id="leaderboard-btn" class="secondary-btn" style="margin-bottom: 8px;">
+                        <span id="txt-leaderboard-btn">🏆 SKOR TABELASI</span>
+                    </button>
+                    <button id="restart-from-menu-btn" class="danger-btn">
+                        <span id="txt-restart-btn">🔄 YENİDEN BAŞLAT</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skor Tabelası (Leaderboard) Pop-Up Ekranı -->
+        <div id="leaderboard-modal" class="overlay-screen hidden">
+            <div class="overlay-content leaderboard-modal-content">
+                <h2 class="result-title win" id="txt-lead-title">🏆 SKOR TABELASI</h2>
+                <div class="leaderboard-list" id="leaderboard-list">
+                    <!-- Dinamik liste elemanları -->
+                </div>
+                <button id="close-leaderboard-btn" class="primary-btn" style="margin-top: 12px;">
+                    <span id="txt-lead-close">GERİ DÖN</span>
+                </button>
             </div>
         </div>
     </div>

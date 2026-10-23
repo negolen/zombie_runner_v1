@@ -229,8 +229,8 @@ const Game = {
         targetX: 0,
         x: 0,
         z: 0,
-        speed: 16.2,
-        runSpeed: 16.2,
+        speed: 15.4,
+        runSpeed: 15.4,
         fireTimer: 0,
         fireInterval: 0.22,
         bulletCount: 1,
@@ -261,6 +261,10 @@ const Game = {
     activeAnimations: [],
     boss: null,
     hitStopTimer: 0,
+    clones: [],
+    cloneTimer: 0,
+    collapseSegments: [],
+    skywayBridges: [],
 
     isDragging: false,
     dragStartX: 0,
@@ -312,6 +316,10 @@ let HEALTH_UNIT_GEO, HEALTH_BG_MAT, HEALTH_FILL_MAT;
 let SAW_BLADE_GEO, SAW_BLADE_MAT, SAW_TEETH_GEO, SAW_TEETH_MAT, SAW_STAND_GEO, SAW_STAND_MAT;
 let BARREL_GEO, BARREL_MAT, STRIPE_GEO, STRIPE_MAT;
 let DROP_OCTA_GEO, DROP_DODECA_GEO, DROP_BOX_GEO;
+let UNIT_BOX_GEO, BEACON_GEO;
+let CLONE_BODY_GEO, CLONE_HEAD_GEO, CLONE_GLOW_GEO;
+let CAPACITOR_TORUS_GEO;
+let ROAD_SEG_GEO, CRACK_GEO;
 
 const particleMatCache = new Map();
 function getParticleMaterial(color) {
@@ -402,6 +410,28 @@ function initSharedResources() {
     DROP_OCTA_GEO = new THREE.OctahedronGeometry(0.32);
     DROP_DODECA_GEO = new THREE.DodecahedronGeometry(0.28);
     DROP_BOX_GEO = new THREE.BoxGeometry(0.35, 0.45, 0.1);
+
+    UNIT_BOX_GEO = new THREE.BoxGeometry(1, 1, 1);
+    UNIT_BOX_GEO.userData = { shared: true };
+
+    BEACON_GEO = new THREE.SphereGeometry(1, 6, 6);
+    BEACON_GEO.userData = { shared: true };
+
+    CLONE_BODY_GEO = new THREE.BoxGeometry(0.8, 1.0, 0.5);
+    CLONE_BODY_GEO.userData = { shared: true };
+    CLONE_HEAD_GEO = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    CLONE_HEAD_GEO.userData = { shared: true };
+    CLONE_GLOW_GEO = new THREE.SphereGeometry(0.35, 8, 8);
+    CLONE_GLOW_GEO.userData = { shared: true };
+
+    CAPACITOR_TORUS_GEO = new THREE.TorusGeometry(0.42, 0.05, 6, 16);
+    CAPACITOR_TORUS_GEO.userData = { shared: true };
+
+    ROAD_SEG_GEO = new THREE.PlaneGeometry(Game.trackWidth, 13);
+    ROAD_SEG_GEO.userData = { shared: true };
+
+    CRACK_GEO = new THREE.PlaneGeometry(Game.trackWidth * 0.85, 0.16);
+    CRACK_GEO.userData = { shared: true };
 }
 
 // Güvenli Three.js nesne ve bellek temizliği
@@ -636,9 +666,160 @@ function buildWorld() {
     }
     const worldGroup = new THREE.Group();
 
+    // Dinamik 10 Seviye Teması (Her seviyede döner: Barbie Pembesi, Siber Metropol, Volkan, Buz, vb.)
+    const LEVEL_THEMES = [
+        {
+            name: "Neon Downtown Ruins",
+            sky: 0x120c24,
+            fog: 0x16102c,
+            fogDensity: 0.0085,
+            roadColor: 0x18182c,
+            lCurb: 0x00f2fe,
+            rCurb: 0xf43f5e,
+            bldgBase: 0x1a1530,
+            bldgTrim: 0x221a3e,
+            win1: 0x00f2fe,
+            win2: 0xf43f5e,
+            gridColor: 0x4338ca
+        },
+        {
+            name: "Barbie Cyberpunk (Neon Pink Paradise)",
+            sky: 0x2e0622,
+            fog: 0x3d082e,
+            fogDensity: 0.008,
+            roadColor: 0x280820,
+            lCurb: 0xff1493, // Barbie Hot Pink
+            rCurb: 0xff69b4, // Şeker Pembe
+            bldgBase: 0x3b0a2c,
+            bldgTrim: 0x52103e,
+            win1: 0xff1493, // Barbie Neon Pembe
+            win2: 0xffc0cb, // Pamuk Şeker
+            gridColor: 0xff1493
+        },
+        {
+            name: "Industrial Rust & Hazard",
+            sky: 0x180b05,
+            fog: 0x200e05,
+            fogDensity: 0.010,
+            roadColor: 0x1a110a,
+            lCurb: 0xf97316,
+            rCurb: 0xeab308,
+            bldgBase: 0x24150c,
+            bldgTrim: 0x321c10,
+            win1: 0xf97316,
+            win2: 0xfacc15,
+            gridColor: 0x7c2d12
+        },
+        {
+            name: "Acid Slums & Biohazard Ruins",
+            sky: 0x05160a,
+            fog: 0x081c0e,
+            fogDensity: 0.010,
+            roadColor: 0x0a180d,
+            lCurb: 0x22c55e,
+            rCurb: 0x84cc16,
+            bldgBase: 0x0e2414,
+            bldgTrim: 0x14321d,
+            win1: 0x22c55e,
+            win2: 0xa3e635,
+            gridColor: 0x14532d
+        },
+        {
+            name: "Frozen Megacity Ruins",
+            sky: 0x060e1a,
+            fog: 0x091424,
+            fogDensity: 0.009,
+            roadColor: 0x101a28,
+            lCurb: 0x38bdf8,
+            rCurb: 0xa78bfa,
+            bldgBase: 0x142032,
+            bldgTrim: 0x1a2a40,
+            win1: 0x38bdf8,
+            win2: 0xe0f2fe,
+            gridColor: 0x1e3a8a
+        },
+        {
+            name: "Volcanic Core / Inferno City",
+            sky: 0x1a0302,
+            fog: 0x220503,
+            fogDensity: 0.011,
+            roadColor: 0x1c0604,
+            lCurb: 0xef4444,
+            rCurb: 0xf97316,
+            bldgBase: 0x240806,
+            bldgTrim: 0x300c09,
+            win1: 0xef4444,
+            win2: 0xfbbf24,
+            gridColor: 0x7f1d1d
+        },
+        {
+            name: "Midas Golden Cyber City",
+            sky: 0x181304,
+            fog: 0x241c06,
+            fogDensity: 0.009,
+            roadColor: 0x1c1608,
+            lCurb: 0xfbbf24, // Altın Sarısı
+            rCurb: 0xf59e0b,
+            bldgBase: 0x281e0a,
+            bldgTrim: 0x382a0e,
+            win1: 0xfbbf24,
+            win2: 0xfef08a,
+            gridColor: 0xb45309
+        },
+        {
+            name: "Deep Ocean Abyss & Atlantis",
+            sky: 0x03121c,
+            fog: 0x051824,
+            fogDensity: 0.009,
+            roadColor: 0x071b28,
+            lCurb: 0x06b6d4, // Turkuaz
+            rCurb: 0x3b82f6,
+            bldgBase: 0x0a2232,
+            bldgTrim: 0x103046,
+            win1: 0x22d3ee,
+            win2: 0x67e8f9,
+            gridColor: 0x0369a1
+        },
+        {
+            name: "Void Eclipse / Cosmic Rift",
+            sky: 0x0a0618,
+            fog: 0x100a22,
+            fogDensity: 0.009,
+            roadColor: 0x120c24,
+            lCurb: 0x8b5cf6, // Eflatun
+            rCurb: 0xc084fc,
+            bldgBase: 0x1a1234,
+            bldgTrim: 0x241846,
+            win1: 0xa855f7,
+            win2: 0xe9d5ff,
+            gridColor: 0x581c87
+        },
+        {
+            name: "Blood Moon / Crimson Nightmare",
+            sky: 0x1c0408,
+            fog: 0x26060c,
+            fogDensity: 0.010,
+            roadColor: 0x1e060a,
+            lCurb: 0xe11d48, // Rose Crimson
+            rCurb: 0xbe123c,
+            bldgBase: 0x2a080e,
+            bldgTrim: 0x380c14,
+            win1: 0xf43f5e,
+            win2: 0xfecdd3,
+            gridColor: 0x9f1239
+        }
+    ];
+
+    const themeIdx = (Game.level - 1) % LEVEL_THEMES.length;
+    const theme = LEVEL_THEMES[themeIdx];
+    if (scene) {
+        scene.background = new THREE.Color(theme.sky);
+        scene.fog = new THREE.FogExp2(theme.fog, theme.fogDensity);
+    }
+
     // Ana Yol
     const roadGeo = new THREE.PlaneGeometry(Game.trackWidth, Game.trackLength);
-    const roadMat = new THREE.MeshStandardMaterial({ color: 0x181e36, roughness: 0.6, metalness: 0.3 });
+    const roadMat = new THREE.MeshStandardMaterial({ color: theme.roadColor, roughness: 0.6, metalness: 0.3 });
     const road = new THREE.Mesh(roadGeo, roadMat);
     road.rotation.x = -Math.PI / 2;
     road.position.set(0, 0, -Game.trackLength / 2 + 10);
@@ -658,12 +839,12 @@ function buildWorld() {
 
     // Bordürler
     const curbGeo = new THREE.BoxGeometry(0.3, 0.45, Game.trackLength);
-    const leftCurbMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x00b4d8, emissiveIntensity: 0.7 });
+    const leftCurbMat = new THREE.MeshStandardMaterial({ color: theme.lCurb, emissive: theme.lCurb, emissiveIntensity: 0.7 });
     const leftCurb = new THREE.Mesh(curbGeo, leftCurbMat);
     leftCurb.position.set(-Game.trackWidth / 2, 0.22, -Game.trackLength / 2 + 10);
     worldGroup.add(leftCurb);
 
-    const rightCurbMat = new THREE.MeshStandardMaterial({ color: 0xf43f5e, emissive: 0xe11d48, emissiveIntensity: 0.7 });
+    const rightCurbMat = new THREE.MeshStandardMaterial({ color: theme.rCurb, emissive: theme.rCurb, emissiveIntensity: 0.7 });
     const rightCurb = new THREE.Mesh(curbGeo, rightCurbMat);
     rightCurb.position.set(Game.trackWidth / 2, 0.22, -Game.trackLength / 2 + 10);
     worldGroup.add(rightCurb);
@@ -682,6 +863,95 @@ function buildWorld() {
         worldGroup.add(pR);
     }
 
+    // ==========================================
+    // YIKILMIŞ SİBER ŞEHİR & GÖKDELEN HARABELERİ
+    // ==========================================
+    const bldgMat1 = new THREE.MeshStandardMaterial({ color: theme.bldgBase, roughness: 0.85, metalness: 0.2 });
+    const bldgMat2 = new THREE.MeshStandardMaterial({ color: theme.bldgTrim, roughness: 0.8, metalness: 0.3 });
+    const neonWinMat1 = new THREE.MeshBasicMaterial({ color: theme.win1 });
+    const neonWinMat2 = new THREE.MeshBasicMaterial({ color: theme.win2 });
+    const beamMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.3 });
+
+    const spanStart = 20;
+    const spanEnd = Game.bossArenaZ - 40;
+
+    for (let z = spanStart; z > spanEnd; z -= (11 + Math.random() * 5)) {
+        // İki taraf (sol = -1, sağ = 1)
+        [-1, 1].forEach((side, sideIdx) => {
+            // 1. ÖN SIRA YIKIK BİNALAR
+            const bWidth = 4.0 + Math.random() * 3.5;
+            const bDepth = 4.5 + Math.random() * 4.0;
+            const bHeight = 12.0 + Math.random() * 24.0;
+            const bDist = (Game.trackWidth / 2) + 2.8 + Math.random() * 3.2;
+            const bX = side * (bDist + bWidth / 2);
+
+            const mat = Math.random() > 0.4 ? bldgMat1 : bldgMat2;
+            const bldg = new THREE.Mesh(UNIT_BOX_GEO, mat);
+            bldg.scale.set(bWidth, bHeight, bDepth);
+            bldg.position.set(bX, bHeight / 2 - 0.2, z);
+            bldg.castShadow = true;
+            bldg.receiveShadow = true;
+
+            // Bazı binalar harabe gibi eğik durur
+            if (Math.random() > 0.35) {
+                bldg.rotation.z = side * (0.04 + Math.random() * 0.12);
+                bldg.rotation.x = (Math.random() - 0.5) * 0.08;
+            }
+            worldGroup.add(bldg);
+
+            // Binaların ön yüzüne neon pencereler ve çatlak ışıkları
+            const winCount = Math.floor(Math.random() * 4) + 2;
+            for (let w = 0; w < winCount; w++) {
+                const winW = (Math.random() > 0.4 ? 1.6 : 0.8);
+                const winH = 0.35 + Math.random() * 0.3;
+                const winMat = (w % 2 === 0) ? neonWinMat1 : neonWinMat2;
+                const win = new THREE.Mesh(UNIT_BOX_GEO, winMat);
+                win.scale.set(winW, winH, 0.1);
+                const winY = 2.5 + w * 3.8 + Math.random() * 1.5;
+                if (winY < bHeight - 1.5) {
+                    const winX = bX - side * (bWidth / 2 - 0.1);
+                    win.position.set(winX, winY, z + (Math.random() - 0.5) * (bDepth * 0.6));
+                    win.rotation.y = side * Math.PI / 2;
+                    worldGroup.add(win);
+                }
+            }
+
+            // Çatıya kırık anten veya eğik çelik kiriş
+            if (Math.random() > 0.45) {
+                const beam = new THREE.Mesh(UNIT_BOX_GEO, beamMat);
+                beam.scale.set(0.2, 4.5, 0.2);
+                beam.position.set(bX + (Math.random() - 0.5) * 1.5, bHeight + 2.0, z);
+                beam.rotation.z = (Math.random() - 0.5) * 0.5;
+                beam.rotation.x = (Math.random() - 0.5) * 0.5;
+                worldGroup.add(beam);
+
+                // Anten tepesinde küçük uyarı ışığı
+                const beacon = new THREE.Mesh(BEACON_GEO, neonWinMat2);
+                beacon.scale.set(0.18, 0.18, 0.18);
+                beacon.position.set(beam.position.x, bHeight + 4.2, beam.position.z);
+                worldGroup.add(beacon);
+            }
+
+            // 2. ARKA SIRA DEV SİLÜET GÖKDELENLER (Derinlik efekti)
+            const bgDist = (Game.trackWidth / 2) + 14.0 + Math.random() * 8.0;
+            const bgX = side * bgDist;
+            const bgH = 32.0 + Math.random() * 40.0;
+            const bgW = 6.0 + Math.random() * 5.0;
+            const bgD = 7.0 + Math.random() * 6.0;
+
+            const bgBldg = new THREE.Mesh(UNIT_BOX_GEO, bldgMat1);
+            bgBldg.scale.set(bgW, bgH, bgD);
+            bgBldg.position.set(bgX, bgH / 2 - 0.2, z + (Math.random() - 0.5) * 6);
+            worldGroup.add(bgBldg);
+
+            // Arka gökdelen tepe neon çizgisi
+            const roofNeon = new THREE.Mesh(UNIT_BOX_GEO, neonWinMat1);
+            roofNeon.scale.set(bgW * 0.85, 0.4, 0.3);
+            roofNeon.position.set(bgX, bgH - 0.5, bgBldg.position.z);
+            worldGroup.add(roofNeon);
+        });
+    }
+
     // Boss Arenası
     const arenaGeo = new THREE.CylinderGeometry(18, 18, 0.6, 32);
     const arenaMat = new THREE.MeshStandardMaterial({ color: 0x241738, roughness: 0.5, metalness: 0.4 });
@@ -697,9 +967,89 @@ function buildWorld() {
     ring.position.set(0, 0.22, Game.bossArenaZ);
     worldGroup.add(ring);
 
-    const gridHelper = new THREE.GridHelper(500, 70, 0x4338ca, 0x1e1b4b);
+    const gridHelper = new THREE.GridHelper(500, 70, theme.gridColor, 0x110e24);
     gridHelper.position.set(0, -0.3, Game.bossArenaZ / 2);
     worldGroup.add(gridHelper);
+
+    // ==========================================
+    // 3D NEON ÜST KÖPRÜ & YÜKSELEN RAMPALAR (SKYWAY OVERPASS)
+    // ==========================================
+    Game.skywayBridges = [];
+    const bridgeZs = [-150, -270];
+    const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x181e38, metalness: 0.6, roughness: 0.3 });
+    const bridgeRailMat = new THREE.MeshBasicMaterial({ color: theme.lCurb });
+
+    bridgeZs.forEach((bZ) => {
+        if (bZ < Game.bossArenaZ + 60) return;
+        const bGroup = new THREE.Group();
+        const bW = 4.2;
+        const bH = 2.4;
+        const rampLen = 8;
+        const spanLen = 22;
+
+        // 1. Tırmanma Rampası
+        const upRamp = new THREE.Mesh(new THREE.BoxGeometry(bW, 0.25, rampLen), bridgeMat);
+        upRamp.rotation.x = Math.atan2(bH, rampLen);
+        upRamp.position.set(0, bH / 2, bZ - rampLen / 2);
+        bGroup.add(upRamp);
+
+        // 2. Havada Asılı Üst Köprü Platformu
+        const bridgePlatform = new THREE.Mesh(new THREE.BoxGeometry(bW, 0.3, spanLen), bridgeMat);
+        bridgePlatform.position.set(0, bH, bZ - rampLen - spanLen / 2);
+        bGroup.add(bridgePlatform);
+
+        // Köprü kenar neon trabzanları (sol & sağ)
+        [-bW / 2 + 0.1, bW / 2 - 0.1].forEach(rx => {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.6, spanLen), bridgeRailMat);
+            rail.position.set(rx, bH + 0.35, bZ - rampLen - spanLen / 2);
+            bGroup.add(rail);
+        });
+
+        // 3. İniş Rampası
+        const downRamp = new THREE.Mesh(new THREE.BoxGeometry(bW, 0.25, rampLen), bridgeMat);
+        downRamp.rotation.x = -Math.atan2(bH, rampLen);
+        downRamp.position.set(0, bH / 2, bZ - rampLen - spanLen - rampLen / 2);
+        bGroup.add(downRamp);
+
+        // Köprü destek ayakları
+        const pillarGeo = new THREE.BoxGeometry(0.4, bH, 0.4);
+        [-bW / 2 + 0.3, bW / 2 - 0.3].forEach(px => {
+            const p1 = new THREE.Mesh(pillarGeo, bridgeMat);
+            p1.position.set(px, bH / 2, bZ - rampLen - 2);
+            bGroup.add(p1);
+
+            const p2 = new THREE.Mesh(pillarGeo, bridgeMat);
+            p2.position.set(px, bH / 2, bZ - rampLen - spanLen + 2);
+            bGroup.add(p2);
+        });
+
+        worldGroup.add(bGroup);
+
+        Game.skywayBridges.push({
+            startZ: bZ,
+            upEnd: bZ - rampLen,
+            spanEnd: bZ - rampLen - spanLen,
+            totalEnd: bZ - rampLen - spanLen - rampLen,
+            width: bW,
+            height: bH
+        });
+    });
+
+    // Çöken Yol Segmentleri (Boss'a yaklaşırken, son 100 birim)
+    Game.collapseSegments = [];
+    const collapseStart = Game.bossArenaZ + 100;
+    const collapseCount = 6;
+    for (let i = 0; i < collapseCount; i++) {
+        const segZ = collapseStart + i * 14;
+        const segMat = new THREE.MeshStandardMaterial({ color: 0x241434, roughness: 0.8, metalness: 0.2 });
+        const seg = new THREE.Mesh(ROAD_SEG_GEO, segMat);
+        seg.rotation.x = -Math.PI / 2;
+        seg.position.set(0, 0.015, segZ);
+        seg.receiveShadow = true;
+        worldGroup.add(seg);
+
+        Game.collapseSegments.push({ mesh: seg, baseZ: segZ, fallen: false, fallSpeed: 0, triggered: false });
+    }
 
     scene.add(worldGroup);
     Game.worldGroup = worldGroup;
@@ -797,10 +1147,10 @@ function setupLevel(lvl) {
     if (DOM.levelDisplay) DOM.levelDisplay.textContent = `LV. ${lvl}`;
 
     const gateCount = 7 + Math.floor((lvl - 1) / 3);
-    const segmentDist = 42;
+    const segmentDist = 48;
     const trackSpan = gateCount * segmentDist;
-    Game.trackLength = trackSpan + 140;
-    Game.bossArenaZ = -(trackSpan + 50);
+    Game.trackLength = trackSpan + 180;
+    Game.bossArenaZ = -(trackSpan + 80);
 
     buildWorld();
 
@@ -813,10 +1163,10 @@ function setupLevel(lvl) {
 
     const zPositions = [];
     for (let i = 0; i < gateCount; i++) {
-        zPositions.push(-38 - (i * segmentDist));
+        zPositions.push(-70 - (i * segmentDist));
     }
 
-    zPositions.forEach(z => {
+    zPositions.forEach((z, gIdx) => {
         const hasNegative = Math.random() < 0.25;
         const negativeSide = Math.random() < 0.5 ? 'left' : 'right';
 
@@ -826,7 +1176,8 @@ function setupLevel(lvl) {
             { type: 'damage', val: 15, label: '+15 HASAR', isPos: true },
             { type: 'heart', val: 1.0, label: '+1 KALP ❤️', isPos: true },
             { type: 'heart', val: 0.5, label: '+0.5 KALP', isPos: true },
-            { type: 'bullets', val: 2, label: '+2 MERMİ', isPos: true }
+            { type: 'bullets', val: 2, label: '+2 MERMİ', isPos: true },
+            { type: 'clone', val: 1, label: '👥 KLON SALDIRISI!', isPos: true }
         ];
 
         const negPool = [
@@ -854,26 +1205,28 @@ function setupLevel(lvl) {
 
     const hpMult = 1 + (lvl - 1) * 0.35;
 
-    // Kapı öncesi garantili zombiler
-    zPositions.forEach(z => {
+    // Kapı öncesi garantili zombiler (İlk kapıda oyuncuya ekstra güvenli mesafe tanır)
+    zPositions.forEach((z, gIdx) => {
         const mobsBeforeGate = Math.floor(Math.random() * 2) + 2;
         const spacing = (Game.trackWidth - 2.0) / mobsBeforeGate;
+        const minOffset = (gIdx === 0) ? 10 : 14;
         for (let i = 0; i < mobsBeforeGate; i++) {
             const x = -((Game.trackWidth - 2.0) / 2) + i * spacing + (Math.random() * 0.5 - 0.25);
-            const zOffset = z + 12 + Math.random() * 5;
+            const zOffset = z + minOffset + Math.random() * 4;
             const rand = Math.random();
             let type = 'normal';
-            if (rand > 0.85) type = 'tank';
-            else if (rand > 0.70) type = 'shield';
-            else if (rand > 0.52) type = 'boomer';
+            if (rand > 0.90) type = 'tank';
+            else if (rand > 0.78) type = 'shield';
+            else if (rand > 0.64) type = 'capacitor';
+            else if (rand > 0.50) type = 'boomer';
             else if (rand > 0.32) type = 'fast';
             createZombie(x, zOffset, type, hpMult);
         }
     });
 
-    // Pist boyu dalgalar
-    for (let z = -18; z > Game.bossArenaZ + 20; z -= 14) {
-        if (zPositions.some(gz => Math.abs(gz - z) < 15)) continue;
+    // Pist boyu dalgalar (Başlangıç 0..-65 Z arası tamamen temiz koridor)
+    for (let z = -70; z > Game.bossArenaZ + 20; z -= 15) {
+        if (zPositions.some(gz => Math.abs(gz - z) < 16)) continue;
 
         const count = Math.floor(Math.random() * 3) + 1;
         const spacing = (Game.trackWidth - 2.5) / count;
@@ -882,9 +1235,10 @@ function setupLevel(lvl) {
             const x = -((Game.trackWidth - 2.5) / 2) + i * spacing + (Math.random() * 0.4 - 0.2);
             const rand = Math.random();
             let type = 'normal';
-            if (rand > 0.85) type = 'tank';
-            else if (rand > 0.70) type = 'shield';
-            else if (rand > 0.52) type = 'boomer';
+            if (rand > 0.90) type = 'tank';
+            else if (rand > 0.78) type = 'shield';
+            else if (rand > 0.64) type = 'capacitor';
+            else if (rand > 0.50) type = 'boomer';
             else if (rand > 0.32) type = 'fast';
             createZombie(x, z, type, hpMult);
         }
@@ -892,16 +1246,16 @@ function setupLevel(lvl) {
 
     if (lvl >= 5) {
         const sawCount = Math.min(6, 2 + Math.floor((lvl - 5) / 2));
-        const spacing = (Math.abs(Game.bossArenaZ) - 80) / sawCount;
+        const spacing = (Math.abs(Game.bossArenaZ) - 100) / sawCount;
         for (let i = 0; i < sawCount; i++) {
-            createSawBlade(-50 - i * spacing - (Math.random() * 8));
+            createSawBlade(-80 - i * spacing - (Math.random() * 8));
         }
     }
 
     const barrelCount = 3 + Math.floor(gateCount / 2);
-    const bSpacing = (Math.abs(Game.bossArenaZ) - 70) / barrelCount;
+    const bSpacing = (Math.abs(Game.bossArenaZ) - 100) / barrelCount;
     for (let i = 0; i < barrelCount; i++) {
-        const bz = -35 - i * bSpacing + (Math.random() * 6 - 3);
+        const bz = -65 - i * bSpacing + (Math.random() * 6 - 3);
         const bx = (Math.random() > 0.5 ? 1 : -1) * (1.2 + Math.random() * 1.8);
         createExplosiveBarrel(bx, bz);
     }
@@ -961,6 +1315,17 @@ function clearLevelEntities() {
         if (anim.mesh) scene.remove(anim.mesh);
     });
     Game.activeAnimations = [];
+
+    // Klonları temizle
+    Game.clones.forEach(c => {
+        disposeHierarchy(c.mesh);
+        scene.remove(c.mesh);
+    });
+    Game.clones = [];
+    Game.cloneTimer = 0;
+
+    Game.collapseSegments = [];
+    Game.skywayBridges = [];
 
     if (Game.boss && Game.boss.mesh) {
         disposeHierarchy(Game.boss.mesh);
@@ -1129,7 +1494,8 @@ function buildGateMesh(w, h, info) {
     const ctx = canvas.getContext('2d');
     // Arka plan — hafif renk tonu
     ctx.fillStyle = info.isPos ? 'rgba(0,50,80,0.65)' : 'rgba(80,0,0,0.65)';
-    ctx.roundRect(4, 4, 248, 120, 14);
+    if (ctx.roundRect) ctx.roundRect(4, 4, 248, 120, 14);
+    else ctx.rect(4, 4, 248, 120);
     ctx.fill();
     // Yazı — her zaman beyaz + siyah stroke (okunabilir)
     ctx.font = 'bold 34px Arial';
@@ -1172,15 +1538,20 @@ function createZombie(x, z, type, hpMult) {
     } else if (type === 'shield') {
         hp = 70; speed = 1.6; color = 0x475569; scale = 1.15;
         shieldHp = Math.round(50 * hpMult);
+    } else if (type === 'capacitor') {
+        hp = 35; speed = 2.0; color = 0x0284c7; scale = 1.05;
     }
 
     hp = Math.round(hp * hpMult);
 
+    const isCapacitor = type === 'capacitor';
+    const isBoomer = type === 'boomer';
+
     const bodyMat = new THREE.MeshStandardMaterial({
         color,
         roughness: 0.7,
-        emissive: type === 'boomer' ? 0x059669 : 0x000000,
-        emissiveIntensity: type === 'boomer' ? 0.4 : 0
+        emissive: isCapacitor ? 0x0284c7 : (isBoomer ? 0x059669 : 0x000000),
+        emissiveIntensity: isCapacitor ? 0.7 : (isBoomer ? 0.4 : 0)
     });
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.7 * scale, 0.9 * scale, 0.4 * scale), bodyMat);
     body.position.y = 0.9 * scale;
@@ -1191,6 +1562,15 @@ function createZombie(x, z, type, hpMult) {
         const belly = new THREE.Mesh(new THREE.SphereGeometry(0.32 * scale, 8, 8), new THREE.MeshBasicMaterial({ color: 0x84cc16 }));
         belly.position.set(0, 0.85 * scale, 0.22 * scale);
         group.add(belly);
+    }
+
+    if (type === 'capacitor') {
+        const torusMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+        const torus = new THREE.Mesh(CAPACITOR_TORUS_GEO, torusMat);
+        torus.scale.set(scale, scale, scale);
+        torus.rotation.x = Math.PI / 2;
+        torus.position.y = 0.9 * scale;
+        group.add(torus);
     }
 
     if (type === 'shield') {
@@ -1207,13 +1587,15 @@ function createZombie(x, z, type, hpMult) {
         shieldMesh = shieldGroup;
     }
 
-    const headMat = new THREE.MeshStandardMaterial({ color: type === 'boomer' ? 0x10b981 : 0x15803d });
+    const headColor = type === 'boomer' ? 0x10b981 : (type === 'capacitor' ? 0x0369a1 : 0x15803d);
+    const headMat = new THREE.MeshStandardMaterial({ color: headColor });
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.5 * scale, 0.5 * scale, 0.5 * scale), headMat);
     head.position.y = 1.6 * scale;
     head.castShadow = true;
     group.add(head);
 
-    const eyeMat = new THREE.MeshBasicMaterial({ color: type === 'boomer' ? 0xfacc15 : 0xef4444 });
+    const eyeColor = type === 'boomer' ? 0xfacc15 : (type === 'capacitor' ? 0x38bdf8 : 0xef4444);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: eyeColor });
     const eye1 = new THREE.Mesh(new THREE.BoxGeometry(0.1 * scale, 0.08 * scale, 0.08 * scale), eyeMat);
     eye1.position.set(-0.13 * scale, 1.65 * scale, 0.25 * scale);
     const eye2 = eye1.clone();
@@ -1496,7 +1878,7 @@ function triggerSkill1() {
             Game.hitStopTimer = 0.055;
             createExplosion(bPos.x, 2.5, bPos.z, 0xff4400, 35);
             createFloatingText(`💥 -${dmg}`, bPos.x, 3.2, bPos.z, '#ef4444');
-            if (Game.boss.hp <= 0) triggerVictory();
+            if (Game.boss.hp <= 0) startBossDeath(Game.boss);
         }
     });
 }
@@ -1670,17 +2052,18 @@ function shootBullets() {
     else if (count === 3) spreads.push(-0.5, 0, 0.5);
     else if (count >= 4) spreads.push(-0.7, -0.25, 0.25, 0.7);
 
+    const pY = 1.0 + (p.y || 0);
     for (let i = 0; i < spreads.length; i++) {
         const offset = spreads[i];
         const bullet = new THREE.Mesh(BULLET_GEO, BULLET_MAT);
         bullet.userData.shared = true;
-        bullet.position.set(p.x + offset, 1.0, p.z - 0.8);
+        bullet.position.set(p.x + offset, pY, p.z - 0.8);
         scene.add(bullet);
 
         Game.bullets.push({
             mesh: bullet,
             x: bullet.position.x,
-            y: bullet.position.y,
+            y: pY,
             z: bullet.position.z,
             damage: p.damage,
             speed: p.bulletSpeed,
@@ -1735,12 +2118,131 @@ function applyGateUpgrade(config) {
         p.hearts = Math.min(6.0, Math.max(1.0, p.hearts + config.val));
         updateHeartsUI();
         showBanner(config.isPos ? `❤️ +${config.val} KALP KAZANDIN!` : `💔 ${config.val} KALP KAYBETTİN!`, config.isPos);
+    } else if (config.type === 'clone') {
+        spawnClones();
+        showBanner('👥 NEON KLON SALDIRISI! (2.5s)', true);
     }
 
     if (config.isPos) sfx.playPowerup();
     else sfx.playHurt();
 
     updateHUDStats();
+}
+
+function spawnClones() {
+    // Mevcut klonları temizle
+    Game.clones.forEach(c => {
+        disposeHierarchy(c.mesh);
+        scene.remove(c.mesh);
+    });
+    Game.clones = [];
+    Game.cloneTimer = 2.5;
+
+    const offsets = [-2.2, 2.2];
+    offsets.forEach((xOff, idx) => {
+        const cloneGroup = new THREE.Group();
+
+        const color = idx === 0 ? 0x38bdf8 : 0xf472b6;
+        const emissive = idx === 0 ? 0x0ea5e9 : 0xec4899;
+
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color,
+            emissive,
+            emissiveIntensity: 0.85,
+            transparent: true,
+            opacity: 0.75
+        });
+
+        const body = new THREE.Mesh(CLONE_BODY_GEO, bodyMat);
+        body.position.y = 1.0;
+        cloneGroup.add(body);
+
+        const head = new THREE.Mesh(CLONE_HEAD_GEO, bodyMat);
+        head.position.y = 1.8;
+        cloneGroup.add(head);
+
+        const glow = new THREE.Mesh(
+            CLONE_GLOW_GEO,
+            new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3 })
+        );
+        glow.position.y = 1.0;
+        cloneGroup.add(glow);
+
+        cloneGroup.position.set(Game.player.x + xOff, 0, Game.player.z);
+        scene.add(cloneGroup);
+
+        Game.clones.push({
+            mesh: cloneGroup,
+            xOffset: xOff,
+            bodyMat,
+            fireTimer: 0
+        });
+    });
+}
+
+function triggerChainLightning(sourceEnemy) {
+    const maxChain = 4;
+    const chainRadius = 5.0;
+    const sPos = sourceEnemy.mesh.position;
+
+    // Sonraki kapının Z pozisyonunu bul (kapı arkasındakileri vurmasın)
+    let nextGateZ = -99999;
+    for (let i = 0; i < Game.gatePairs.length; i++) {
+        const g = Game.gatePairs[i];
+        if (g.z < sPos.z) {
+            nextGateZ = g.z;
+            break;
+        }
+    }
+
+    const candidates = Game.enemies
+        .filter(e => e !== sourceEnemy && e.hp > 0 && e.mesh.position.z >= nextGateZ - 2)
+        .map(e => ({
+            e,
+            distSq: (e.mesh.position.x - sPos.x)**2 + (e.mesh.position.z - sPos.z)**2
+        }))
+        .filter(c => c.distSq <= chainRadius * chainRadius)
+        .sort((a, b) => a.distSq - b.distSq);
+
+    const hitTargets = candidates.slice(0, maxChain);
+    hitTargets.forEach(({ e }) => {
+        e.hp -= 35;
+        createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, 0x38bdf8, 8);
+        createFloatingText('⚡ CHAIN! -35', e.mesh.position.x, 2.2, e.mesh.position.z, '#38bdf8');
+
+        // Şimşek arkı çizgisi
+        const points = [
+            new THREE.Vector3(sPos.x, 1.2, sPos.z),
+            new THREE.Vector3(e.mesh.position.x, 1.2, e.mesh.position.z)
+        ];
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
+        const line = new THREE.Line(lineGeo, lineMat);
+        scene.add(line);
+        setTimeout(() => {
+            scene.remove(line);
+            lineGeo.dispose();
+            lineMat.dispose();
+        }, 220);
+
+        if (e.hpBarMesh) {
+            const oPct = Math.max(0, e.hp / e.maxHp);
+            e.hpBarMesh.fillMesh.scale.x = oPct * e.hpBarMesh.maxWidth;
+            e.hpBarMesh.fillMesh.position.x = -e.hpBarMesh.maxWidth * (1 - oPct) / 2;
+        }
+
+        if (e.hp <= 0) {
+            const idx = Game.enemies.indexOf(e);
+            if (idx !== -1) {
+                createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, e.originalColor || 0x22c55e);
+                disposeHierarchy(e.mesh);
+                scene.remove(e.mesh);
+                if (e.hpBarMesh) scene.remove(e.hpBarMesh);
+                Game.enemies.splice(idx, 1);
+                Game.score += 50;
+            }
+        }
+    });
 }
 
 function updateHUDStats() {
@@ -1802,7 +2304,34 @@ function update(delta) {
     if (Game.keys.right) p.targetX = Math.min(limit, p.targetX + keyboardSpeed * delta);
 
     p.x += (p.targetX - p.x) * 18 * delta;
-    p.mesh.position.set(p.x, 0, p.z);
+
+    // 3D Neon Üst Köprü (Skyway Bridge) Yükseklik Hesabı
+    let targetY = 0;
+    if (Game.skywayBridges && Game.skywayBridges.length > 0) {
+        for (let bi = 0; bi < Game.skywayBridges.length; bi++) {
+            const b = Game.skywayBridges[bi];
+            if (Math.abs(p.x) <= b.width / 2 + 0.2) {
+                if (p.z <= b.startZ && p.z >= b.upEnd) {
+                    // Tırmanma rampası
+                    const prog = (b.startZ - p.z) / (b.startZ - b.upEnd);
+                    targetY = prog * b.height;
+                    break;
+                } else if (p.z < b.upEnd && p.z > b.spanEnd) {
+                    // Düz köprü platformu
+                    targetY = b.height;
+                    break;
+                } else if (p.z <= b.spanEnd && p.z >= b.totalEnd) {
+                    // İniş rampası
+                    const prog = (p.z - b.totalEnd) / (b.spanEnd - b.totalEnd);
+                    targetY = prog * b.height;
+                    break;
+                }
+            }
+        }
+    }
+    p.y = p.y || 0;
+    p.y += (targetY - p.y) * 16 * delta;
+    p.mesh.position.set(p.x, p.y, p.z);
 
     const runCycle = Math.sin(clock.getElapsedTime() * 14);
     p.limbs.leftLeg.rotation.x = runCycle * 0.6;
@@ -1811,9 +2340,9 @@ function update(delta) {
     p.limbs.rightArm.rotation.x = runCycle * 0.4;
 
     camera.position.x += (p.x * 0.6 - camera.position.x) * 8 * delta;
-    camera.position.y = 5.2;
+    camera.position.y = 5.2 + p.y * 0.6;
     camera.position.z = p.z + 8.5;
-    camera.lookAt(p.x * 0.3, 1.4, p.z - 7);
+    camera.lookAt(p.x * 0.3, 1.4 + p.y * 0.4, p.z - 7);
 
     p.fireTimer += delta;
     if (p.fireTimer >= p.fireInterval) {
@@ -1821,9 +2350,54 @@ function update(delta) {
         shootBullets();
     }
 
-    // Mermiler ve Çarpışmalar (Karesel mesafe kontrolü ile sıfır Math.sqrt maliyeti)
+    // Klonların Güncellenmesi & Senkron Ateş
+    if (Game.cloneTimer > 0) {
+        Game.cloneTimer -= delta;
+        for (let ci = Game.clones.length - 1; ci >= 0; ci--) {
+            const c = Game.clones[ci];
+            const targetX = Game.player.x + c.xOffset;
+            const cLimit = (Game.trackWidth / 2) - 0.7;
+            c.mesh.position.x = THREE.MathUtils.clamp(targetX, -cLimit, cLimit);
+            c.mesh.position.z = Game.player.z;
+
+            // Son 0.5 saniyede fade-out
+            const fadeRatio = Math.min(1, Game.cloneTimer / 0.5);
+            c.bodyMat.opacity = 0.75 * fadeRatio;
+
+            // Klon mermisi
+            c.fireTimer += delta;
+            if (c.fireTimer >= Game.player.fireInterval) {
+                c.fireTimer = 0;
+                const cBullet = new THREE.Mesh(BULLET_GEO, BULLET_MAT);
+                cBullet.userData.shared = true;
+                cBullet.position.set(c.mesh.position.x, 1.0, c.mesh.position.z - 0.8);
+                scene.add(cBullet);
+                Game.bullets.push({
+                    mesh: cBullet,
+                    x: cBullet.position.x,
+                    y: 1.0,
+                    z: cBullet.position.z,
+                    damage: Game.player.damage,
+                    speed: Game.player.bulletSpeed,
+                    vx: 0
+                });
+            }
+        }
+
+        if (Game.cloneTimer <= 0) {
+            Game.clones.forEach(c => {
+                createExplosion(c.mesh.position.x, 1.0, c.mesh.position.z, 0x38bdf8, 12);
+                disposeHierarchy(c.mesh);
+                scene.remove(c.mesh);
+            });
+            Game.clones = [];
+        }
+    }
+
+    // Mermiler ve Çarpışmalar (Swept Z + Noktasal Çift Güvenceli Algılama)
     for (let i = Game.bullets.length - 1; i >= 0; i--) {
         const b = Game.bullets[i];
+        const prevZ = b.z;
         b.z -= b.speed * delta;
         b.x += b.vx * delta;
         b.mesh.position.set(b.x, b.y, b.z);
@@ -1852,10 +2426,11 @@ function update(delta) {
             const e = Game.enemies[j];
             const dx = b.x - e.mesh.position.x;
             const dz = b.z - e.mesh.position.z;
-            const distSq = dx * dx + dz * dz;
-            const hitR = e.radius + 0.3;
+            const hitR = e.radius + 0.45;
+            const isPointHit = (dx * dx + dz * dz) < (hitR * hitR);
+            const isSweptHit = (Math.abs(dx) <= hitR) && (e.mesh.position.z <= prevZ + 0.3) && (e.mesh.position.z >= b.z - 0.3);
 
-            if (distSq < hitR * hitR) {
+            if (isPointHit || isSweptHit) {
                 if (e.type === 'shield' && Math.abs(dx) < 0.36 && e.shieldHp > 0) {
                     e.shieldHp -= b.damage;
                     createExplosion(b.x, 1.0 * e.scale, b.z, 0x38bdf8, 8);
@@ -1888,7 +2463,13 @@ function update(delta) {
                 if (e.hp <= 0) {
                     createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, e.originalColor);
 
-                    if (e.type === 'boomer') {
+                    if (e.type === 'capacitor') {
+                        sfx.playExplosion();
+                        createExplosion(e.mesh.position.x, 1.2, e.mesh.position.z, 0x38bdf8, 22);
+                        createFloatingText('⚡ KAPASİTÖR PATLAMASI!', e.mesh.position.x, 2.4, e.mesh.position.z, '#38bdf8');
+                        triggerChainLightning(e);
+                        Game.score += 50;
+                    } else if (e.type === 'boomer') {
                         sfx.playExplosion();
                         createExplosion(e.mesh.position.x, 1.2, e.mesh.position.z, 0x10b981, 28);
                         createFloatingText('☣️ TOXIC BLAST! +100', e.mesh.position.x, 2.2, e.mesh.position.z, '#10b981');
@@ -1976,7 +2557,7 @@ function update(delta) {
                 Game.bullets.splice(i, 1);
                 bulletRemoved = true;
 
-                if (boss.hp <= 0) triggerVictory();
+                if (boss.hp <= 0) startBossDeath(boss);
             }
         }
 
@@ -2076,6 +2657,24 @@ function update(delta) {
         }
     }
 
+    // Çöken Yol Segmentleri (Boss'a yaklaşırken çöküş)
+    for (let i = 0; i < Game.collapseSegments.length; i++) {
+        const cs = Game.collapseSegments[i];
+        if (!cs.triggered && p.z < cs.baseZ + 35) {
+            cs.triggered = true;
+            cs.fallSpeed = 0.5;
+        }
+        if (cs.triggered && !cs.fallen) {
+            cs.fallSpeed = Math.min(cs.fallSpeed + delta * 5, 14);
+            cs.mesh.position.y -= cs.fallSpeed * delta;
+            cs.mesh.rotation.x += delta * 0.35;
+            if (cs.mesh.position.y < -10) {
+                cs.fallen = true;
+                cs.mesh.visible = false;
+            }
+        }
+    }
+
     // Döner Bıçaklar
     for (let i = 0; i < Game.sawBlades.length; i++) {
         const sb = Game.sawBlades[i];
@@ -2121,60 +2720,102 @@ function update(delta) {
         }
     }
 
-    // Boss Hareketi & Animasyonları
-    if (Game.boss && Game.boss.active) {
+    // Boss Hareketi & Epik Ölüm Animasyonu
+    if (Game.boss) {
         const boss = Game.boss;
-        boss.walkTime = (boss.walkTime || 0) + delta * 4.5;
-        boss.strafeTimer = (boss.strafeTimer || 0) + delta;
 
-        if (boss.weakspotMesh) {
-            boss.weakspotMesh.rotation.y += delta * 4;
-            boss.weakspotMesh.rotation.z += delta * 3;
-            const pulse = (0.28 + Math.sin(clock.getElapsedTime() * 8) * 0.06) * boss.scale;
-            boss.weakspotMesh.scale.set(pulse, pulse, pulse);
-        }
+        if (boss.isDying) {
+            boss.deathTimer -= delta;
+            boss.explodeTimer = (boss.explodeTimer || 0) + delta;
 
-        if (boss.strafeTimer > 2.2) {
-            boss.strafeTimer = 0;
-            boss.strafeTargetX = (Math.random() - 0.5) * (Game.trackWidth - 3.0);
-        }
+            // Şiddetli titreme & can çekişme sarsıntısı
+            boss.mesh.position.x += (Math.random() - 0.5) * 0.32;
+            boss.mesh.rotation.z = Math.sin(clock.getElapsedTime() * 40) * 0.18;
 
-        const targetX = boss.strafeTargetX * 0.6 + p.x * 0.4;
-        boss.mesh.position.x += (targetX - boss.mesh.position.x) * 2.2 * delta;
+            // Arkaya doğru yavaşça devrilme & diz çökme
+            boss.mesh.rotation.x = Math.max(-1.45, boss.mesh.rotation.x - delta * 0.65);
+            boss.mesh.position.y = Math.max(-0.6, boss.mesh.position.y - delta * 0.38);
 
-        const stepBob = Math.abs(Math.sin(boss.walkTime * 2)) * 0.35;
-        boss.mesh.position.y = stepBob;
-        boss.mesh.rotation.z = Math.sin(boss.walkTime) * 0.08;
+            // Uzuvlardan ardışık patlamalar ve kıvılcım fışkırması
+            if (boss.explodeTimer >= (boss.explodeInterval || 0.14)) {
+                boss.explodeTimer = 0;
+                sfx.playHit();
+                const bPos = boss.mesh.position;
+                const offX = (Math.random() - 0.5) * (1.8 * boss.scale);
+                const offY = 0.8 + Math.random() * (2.2 * boss.scale);
+                const offZ = (Math.random() - 0.5) * (1.2 * boss.scale);
+                const colors = [0xff0055, 0xfacc15, 0x00f2fe, 0xffffff, 0xff4400];
+                const randCol = colors[Math.floor(Math.random() * colors.length)];
 
-        if (boss.limbs) {
-            if (boss.shootTimer >= 2.2) {
-                boss.limbs.leftArm.rotation.x = -1.4;
-                boss.limbs.rightArm.rotation.x = -1.4;
-                boss.mesh.rotation.x = -0.15;
-            } else if (boss.pulseTimer >= 3.1) {
-                boss.mesh.position.y = stepBob + 1.2;
-                boss.limbs.leftArm.rotation.x = -1.9;
-                boss.limbs.rightArm.rotation.x = -1.9;
-                boss.mesh.rotation.x = 0.1;
-            } else {
-                boss.mesh.rotation.x = 0;
-                boss.limbs.leftArm.rotation.x = Math.sin(boss.walkTime) * 0.7;
-                boss.limbs.rightArm.rotation.x = -Math.sin(boss.walkTime) * 0.7;
-                boss.limbs.leftLeg.rotation.x = -Math.sin(boss.walkTime) * 0.4;
-                boss.limbs.rightLeg.rotation.x = Math.sin(boss.walkTime) * 0.4;
+                createExplosion(bPos.x + offX, offY, bPos.z + offZ, randCol, 14);
+                createFloatingText('💥', bPos.x + offX, offY + 0.8, bPos.z + offZ, '#facc15');
+
+                boss.bodyMat.color.setHex(0xffffff);
+                setTimeout(() => {
+                    if (boss && boss.bodyMat) boss.bodyMat.color.setHex(boss.theme.color || 0xef4444);
+                }, 40);
+
+                // Hafif kamera sarsıntısı (Screen Shake)
+                camera.position.x += (Math.random() - 0.5) * 0.28;
             }
-        }
 
-        boss.shootTimer += delta;
-        if (boss.shootTimer >= 2.8) {
-            boss.shootTimer = 0;
-            fireBossProjectile();
-        }
+            if (boss.deathTimer <= 0) {
+                boss.isDying = false;
+                triggerVictory();
+            }
+        } else if (boss.active) {
+            boss.walkTime = (boss.walkTime || 0) + delta * 4.5;
+            boss.strafeTimer = (boss.strafeTimer || 0) + delta;
 
-        boss.pulseTimer += delta;
-        if (boss.pulseTimer >= 3.8) {
-            boss.pulseTimer = 0;
-            fireBossShockwave();
+            if (boss.weakspotMesh) {
+                boss.weakspotMesh.rotation.y += delta * 4;
+                boss.weakspotMesh.rotation.z += delta * 3;
+                const pulse = (0.28 + Math.sin(clock.getElapsedTime() * 8) * 0.06) * boss.scale;
+                boss.weakspotMesh.scale.set(pulse, pulse, pulse);
+            }
+
+            if (boss.strafeTimer > 2.2) {
+                boss.strafeTimer = 0;
+                boss.strafeTargetX = (Math.random() - 0.5) * (Game.trackWidth - 3.0);
+            }
+
+            const targetX = boss.strafeTargetX * 0.6 + p.x * 0.4;
+            boss.mesh.position.x += (targetX - boss.mesh.position.x) * 2.2 * delta;
+
+            const stepBob = Math.abs(Math.sin(boss.walkTime * 2)) * 0.35;
+            boss.mesh.position.y = stepBob;
+            boss.mesh.rotation.z = Math.sin(boss.walkTime) * 0.08;
+
+            if (boss.limbs) {
+                if (boss.shootTimer >= 2.2) {
+                    boss.limbs.leftArm.rotation.x = -1.4;
+                    boss.limbs.rightArm.rotation.x = -1.4;
+                    boss.mesh.rotation.x = -0.15;
+                } else if (boss.pulseTimer >= 3.1) {
+                    boss.mesh.position.y = stepBob + 1.2;
+                    boss.limbs.leftArm.rotation.x = -1.9;
+                    boss.limbs.rightArm.rotation.x = -1.9;
+                    boss.mesh.rotation.x = 0.1;
+                } else {
+                    boss.mesh.rotation.x = 0;
+                    boss.limbs.leftArm.rotation.x = Math.sin(boss.walkTime) * 0.7;
+                    boss.limbs.rightArm.rotation.x = -Math.sin(boss.walkTime) * 0.7;
+                    boss.limbs.leftLeg.rotation.x = -Math.sin(boss.walkTime) * 0.4;
+                    boss.limbs.rightLeg.rotation.x = Math.sin(boss.walkTime) * 0.4;
+                }
+            }
+
+            boss.shootTimer += delta;
+            if (boss.shootTimer >= 2.8) {
+                boss.shootTimer = 0;
+                fireBossProjectile();
+            }
+
+            boss.pulseTimer += delta;
+            if (boss.pulseTimer >= 3.8) {
+                boss.pulseTimer = 0;
+                fireBossShockwave();
+            }
         }
     }
 
@@ -2291,13 +2932,35 @@ function updateBossHUD() {
     DOM.bossHpText.textContent = `${Math.max(0, Game.boss.hp)} / ${Game.boss.maxHp}`;
 }
 
+function startBossDeath(boss) {
+    if (!boss || boss.isDying) return;
+    boss.isDying = true;
+    boss.active = false;
+    boss.deathTimer = 2.6;
+    boss.explodeTimer = 0;
+    boss.explodeInterval = 0.14;
+
+    sfx.playExplosion();
+    showBanner(`💥 ${boss.theme.name} YENİLDİ! 💥`, true);
+    DOM.bossHud.classList.add('hidden');
+    DOM.bossSkillsBar.classList.add('hidden');
+}
+
 function triggerVictory() {
     Game.state = GAME_STATE.VICTORY;
     sfx.playVictory();
 
-    createExplosion(Game.boss.mesh.position.x, 3.0, Game.boss.mesh.position.z, 0xff0055, 40);
-    disposeHierarchy(Game.boss.mesh);
-    scene.remove(Game.boss.mesh);
+    if (Game.boss && Game.boss.mesh) {
+        const bPos = Game.boss.mesh.position;
+        // Mega Süpernova Final Patlaması
+        createExplosion(bPos.x, 2.5, bPos.z, 0xff0055, 60);
+        createExplosion(bPos.x, 2.5, bPos.z, 0xfacc15, 40);
+        createExplosion(bPos.x, 2.5, bPos.z, 0x00f2fe, 30);
+        createFloatingText('👑 ZAFER! 👑', bPos.x, 4.5, bPos.z, '#fbbf24');
+        disposeHierarchy(Game.boss.mesh);
+        scene.remove(Game.boss.mesh);
+        Game.boss = null;
+    }
 
     Game.score += 1000 * Game.level;
     DOM.victoryScore.textContent = Game.score;
@@ -2308,7 +2971,7 @@ function triggerVictory() {
         DOM.bossHud.classList.add('hidden');
         DOM.bossSkillsBar.classList.add('hidden');
         DOM.victoryScreen.classList.remove('hidden');
-    }, 1000);
+    }, 900);
 }
 
 function triggerGameOver() {

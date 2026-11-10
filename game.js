@@ -318,16 +318,16 @@ const AdManager = {
 // 10 BOSS TEMASI & ÖZELLİKLERİ
 // ==========================================
 const BOSS_THEMES = [
-    { name: "ZOMBİ TİTAN", color: 0x3b0764, eyeColor: 0xff0055, hornColor: 0xef4444, scale: 3.2, hp: 4500 },
-    { name: "MAGMA GOLEM", color: 0x9a3412, eyeColor: 0xfacc15, hornColor: 0xea580c, scale: 3.4, hp: 5800 },
-    { name: "BUZ DEVİ", color: 0x0284c7, eyeColor: 0x38bdf8, hornColor: 0xbae6fd, scale: 3.3, hp: 7200 },
-    { name: "ZEHİR LORDU", color: 0x15803d, eyeColor: 0xa3e635, hornColor: 0x4ade80, scale: 3.5, hp: 8800 },
-    { name: "SİBER MECH", color: 0x334155, eyeColor: 0xef4444, hornColor: 0x38bdf8, scale: 3.4, hp: 10600 },
-    { name: "KEMİK KRALI", color: 0xd6d3d1, eyeColor: 0x6366f1, hornColor: 0xf59e0b, scale: 3.3, hp: 12600 },
-    { name: "KARANLIK ŞÖVALYE", color: 0x0f172a, eyeColor: 0xa855f7, hornColor: 0x7c3aed, scale: 3.6, hp: 15000 },
-    { name: "KAN İBLİSİ", color: 0x881337, eyeColor: 0xf43f5e, hornColor: 0x991b1b, scale: 3.5, hp: 17800 },
-    { name: "FIRTINA DEVİ", color: 0x1e3a8a, eyeColor: 0x67e8f9, hornColor: 0x60a5fa, scale: 3.6, hp: 21000 },
-    { name: "KIYAMET HÜKÜMDARI", color: 0x18181b, eyeColor: 0xfbbf24, hornColor: 0xd97706, scale: 4.0, hp: 25000 }
+    { nameTr: "ZOMBİ TİTAN", nameEn: "ZOMBIE TITAN", get name() { return Game.lang === 'en' ? this.nameEn : this.nameTr; }, color: 0x3b0764, eyeColor: 0xff0055, hornColor: 0xef4444, scale: 3.2, hp: 4500 },
+    { nameTr: "MAGMA GOLEM", nameEn: "MAGMA GOLEM", get name() { return Game.lang === 'en' ? this.nameEn : this.nameTr; }, color: 0x9a3412, eyeColor: 0xfacc15, hornColor: 0xea580c, scale: 3.4, hp: 5800 },
+    { nameTr: "BUZ DEVİ", nameEn: "FROST GIANT", get name() { return Game.lang === 'en' ? this.nameEn : this.nameTr; }, color: 0x0284c7, eyeColor: 0x38bdf8, hornColor: 0xbae6fd, scale: 3.3, hp: 7200 },
+    { nameTr: "ZEHİR LORDU", nameEn: "POISON LORD", get name() { return Game.lang === 'en' ? this.nameEn : this.nameTr; }, color: 0x15803d, eyeColor: 0xa3e635, hornColor: 0x4ade80, scale: 3.5, hp: 8800 },
+    { nameTr: "SİBER MECH", nameEn: "CYBER MECH", get name() { return Game.lang === 'en' ? this.nameEn : this.nameTr; }, color: 0x334155, eyeColor: 0xef4444, hornColor: 0x38bdf8, scale: 3.4, hp: 10600 },
+    { nameTr: "KEMİK KRALI", nameEn: "BONE KING", get name() { return Game.lang === 'en' ? this.nameEn : this.nameTr; }, color: 0xd6d3d1, eyeColor: 0x6366f1, hornColor: 0xf59e0b, scale: 3.3, hp: 12600 },
+    { nameTr: "KARANLIK ŞÖVALYE", nameEn: "DARK KNIGHT", get name() { return Game.lang === 'en' ? this.nameEn : this.nameTr; }, color: 0x0f172a, eyeColor: 0xa855f7, hornColor: 0x7c3aed, scale: 3.6, hp: 15000 },
+    { nameTr: "KAN İBLİSİ", nameEn: "BLOOD DEMON", get name() { return Game.lang === 'en' ? this.nameEn : this.nameTr; }, color: 0x881337, eyeColor: 0xf43f5e, hornColor: 0x991b1b, scale: 3.5, hp: 17800 },
+    { nameTr: "FIRTINA DEVİ", nameEn: "STORM GIANT", get name() { return Game.lang === 'en' ? this.nameEn : this.nameTr; }, color: 0x1e3a8a, eyeColor: 0x67e8f9, hornColor: 0x60a5fa, scale: 3.6, hp: 21000 },
+    { nameTr: "KIYAMET HÜKÜMDARI", nameEn: "DOOMSDAY OVERLORD", get name() { return Game.lang === 'en' ? this.nameEn : this.nameTr; }, color: 0x18181b, eyeColor: 0xfbbf24, hornColor: 0xd97706, scale: 4.0, hp: 25000 }
 ];
 
 // ==========================================
@@ -622,9 +622,9 @@ function initThree() {
     // Reklam SDK Başlatıcı
     AdManager.init();
 
-    // Yüklü dil ayarını uygula
-    const savedLang = localStorage.getItem('zr3d_lang') || 'tr';
-    setLang(savedLang);
+    // Sistem diline göre başlangıç dili algıla veya kayıtlı tercihi uygula
+    const initialLang = detectInitialLang();
+    setLang(initialLang);
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x15122e);
@@ -807,6 +807,10 @@ function setupControls() {
     document.getElementById('close-leaderboard-btn').addEventListener('click', () => closeLeaderboard());
     document.getElementById('lang-tr-btn').addEventListener('click', () => setLang('tr'));
     document.getElementById('lang-en-btn').addEventListener('click', () => setLang('en'));
+    const startTr = document.getElementById('lang-start-tr-btn');
+    if (startTr) startTr.addEventListener('click', () => setLang('tr'));
+    const startEn = document.getElementById('lang-start-en-btn');
+    if (startEn) startEn.addEventListener('click', () => setLang('en'));
     document.getElementById('toggle-sfx-btn').addEventListener('click', () => toggleSfx());
     document.getElementById('toggle-bgm-btn').addEventListener('click', () => toggleBgm());
 }
@@ -1234,7 +1238,8 @@ function buildPlayer() {
 function setupLevel(lvl) {
     clearLevelEntities();
 
-    DOM.levelLabel.textContent = `BÖLÜM ${lvl}`;
+    const L = LANG[Game.lang] || LANG.tr;
+    DOM.levelLabel.textContent = L.lvlLabel(lvl);
     if (DOM.levelDisplay) DOM.levelDisplay.textContent = `LV. ${lvl}`;
 
     const gateCount = 7 + Math.floor((lvl - 1) / 3);
@@ -1262,20 +1267,20 @@ function setupLevel(lvl) {
         const negativeSide = Math.random() < 0.5 ? 'left' : 'right';
 
         const posPool = [
-            { type: 'fireRate', val: 0.04, label: '+HIZLI ATEŞ', isPos: true },
-            { type: 'bullets', val: 1, label: '+1 MERMİ', isPos: true },
-            { type: 'damage', val: 15, label: '+15 HASAR', isPos: true },
-            { type: 'heart', val: 1.0, label: '+1 KALP ❤️', isPos: true },
-            { type: 'heart', val: 0.5, label: '+0.5 KALP', isPos: true },
-            { type: 'bullets', val: 2, label: '+2 MERMİ', isPos: true },
-            { type: 'clone', val: 1, label: '👥 KLON SALDIRISI!', isPos: true }
+            { type: 'fireRate', val: 0.04, key: 'fireRatePos', label: '+HIZLI ATEŞ', isPos: true },
+            { type: 'bullets', val: 1, key: 'bullets1', label: '+1 MERMİ', isPos: true },
+            { type: 'damage', val: 15, key: 'damagePos', label: '+15 HASAR', isPos: true },
+            { type: 'heart', val: 1.0, key: 'heart1', label: '+1 KALP ❤️', isPos: true },
+            { type: 'heart', val: 0.5, key: 'heartHalf', label: '+0.5 KALP', isPos: true },
+            { type: 'bullets', val: 2, key: 'bullets2', label: '+2 MERMİ', isPos: true },
+            { type: 'clone', val: 1, key: 'clone', label: '👥 KLON SALDIRISI!', isPos: true }
         ];
 
         const negPool = [
-            { type: 'damage', val: -5, label: '-5 HASAR', isPos: false },
-            { type: 'bullets', val: -1, label: '-1 MERMİ', isPos: false },
-            { type: 'heart', val: -0.5, label: '-0.5 KALP 💔', isPos: false },
-            { type: 'fireRate', val: -0.03, label: '-HIZLI ATEŞ', isPos: false }
+            { type: 'damage', val: -5, key: 'damageNeg', label: '-5 HASAR', isPos: false },
+            { type: 'bullets', val: -1, key: 'bulletsNeg', label: '-1 MERMİ', isPos: false },
+            { type: 'heart', val: -0.5, key: 'heartNeg', label: '-0.5 KALP 💔', isPos: false },
+            { type: 'fireRate', val: -0.03, key: 'fireRateNeg', label: '-HIZLI ATEŞ', isPos: false }
         ];
 
         const pickPos = () => posPool[Math.floor(Math.random() * posPool.length)];
@@ -1288,7 +1293,7 @@ function setupLevel(lvl) {
         } else {
             leftCfg = pickPos();
             rightCfg = pickPos();
-            while (rightCfg.label === leftCfg.label) rightCfg = pickPos();
+            while (rightCfg.key === leftCfg.key) rightCfg = pickPos();
         }
 
         createNoSkipGatePair(z, leftCfg, rightCfg);
@@ -1549,8 +1554,60 @@ function createNoSkipGatePair(z, leftCfg, rightCfg) {
     });
 }
 
+function getGateLabel(info, lang = Game.lang) {
+    if (!info) return '';
+    const L = LANG[lang] || LANG.tr;
+    if (info.key && L.gates && L.gates[info.key]) {
+        return L.gates[info.key];
+    }
+    return info.label || '';
+}
+
+function updateGateMeshText(mesh, lang = Game.lang) {
+    if (!mesh || !mesh.userData || !mesh.userData.gateInfo) return;
+    const info = mesh.userData.gateInfo;
+    const textMesh = mesh.userData.textMesh;
+    if (!textMesh) return;
+
+    const label = getGateLabel(info, lang);
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = info.isPos ? 'rgba(0,50,80,0.65)' : 'rgba(80,0,0,0.65)';
+    if (ctx.roundRect) ctx.roundRect(4, 4, 248, 120, 14);
+    else ctx.rect(4, 4, 248, 120);
+    ctx.fill();
+
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 7;
+    ctx.shadowColor = '#000000';
+    ctx.shadowBlur = 14;
+    ctx.strokeText(label, 128, 64);
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = info.isPos ? '#00f2fe' : '#ff6060';
+    ctx.shadowBlur = 10;
+    ctx.fillText(label, 128, 64);
+
+    if (textMesh.material.map) textMesh.material.map.dispose();
+    textMesh.material.map = new THREE.CanvasTexture(canvas);
+    textMesh.material.needsUpdate = true;
+}
+
+function refreshGateTextures(lang = Game.lang) {
+    if (!Game.gatePairs) return;
+    Game.gatePairs.forEach(pair => {
+        if (pair.left && pair.left.mesh) updateGateMeshText(pair.left.mesh, lang);
+        if (pair.right && pair.right.mesh) updateGateMeshText(pair.right.mesh, lang);
+    });
+}
+
 function buildGateMesh(w, h, info) {
     const group = new THREE.Group();
+    group.userData.gateInfo = info;
     const color = info.isPos ? 0x00f2fe : 0xef4444;
 
     const frameGeo = new THREE.BoxGeometry(w, h, 0.3);
@@ -1578,6 +1635,7 @@ function buildGateMesh(w, h, info) {
     topBar.position.y = h / 2;
     group.add(topBar);
 
+    const label = getGateLabel(info, Game.lang);
     const canvas = document.createElement('canvas');
     canvas.width = 256;
     canvas.height = 128;
@@ -1588,24 +1646,25 @@ function buildGateMesh(w, h, info) {
     else ctx.rect(4, 4, 248, 120);
     ctx.fill();
     // Yazı — her zaman beyaz + siyah stroke (okunabilir)
-    ctx.font = 'bold 34px Arial';
+    ctx.font = 'bold 32px Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 7;
     ctx.shadowColor = '#000000';
     ctx.shadowBlur = 14;
-    ctx.strokeText(info.label, 128, 64);
+    ctx.strokeText(label, 128, 64);
     ctx.fillStyle = '#ffffff';
     ctx.shadowColor = info.isPos ? '#00f2fe' : '#ff6060';
     ctx.shadowBlur = 10;
-    ctx.fillText(info.label, 128, 64);
+    ctx.fillText(label, 128, 64);
 
     const textTexture = new THREE.CanvasTexture(canvas);
     const textMat = new THREE.MeshBasicMaterial({ map: textTexture, transparent: true });
     const textMesh = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.9, 1.4), textMat);
     textMesh.position.set(0, 0.2, 0.18);
     group.add(textMesh);
+    group.userData.textMesh = textMesh;
 
     return group;
 }
@@ -1945,7 +2004,7 @@ function triggerSkill1() {
 
     Game.player.skill1Used = true;
     DOM.skill1Btn.classList.add('used');
-    showBanner('☄️ METEOR ÇAĞRILDI! ☄️');
+    showBanner(getBanners().meteorCalled);
 
     const bPos = Game.boss.mesh.position;
     const meteor = new THREE.Mesh(METEOR_GEO, METEOR_MAT);
@@ -1976,16 +2035,16 @@ function triggerSkill1() {
 function triggerSkill2() {
     if (Game.state !== GAME_STATE.BOSS_FIGHT) return;
     if (Game.player.skill2Used) {
-        showBanner('👼 Valkyrie bu turda kullanıldı!', false);
+        showBanner(getBanners().valkyrieUsed, false);
         return;
     }
     if (Game.player.hearts >= 4.0) {
-        showBanner('Canınız zaten 4 veya daha fazla!', false);
+        showBanner(getBanners().valkyrieHpFull, false);
         return;
     }
 
     sfx.playHeal();
-    showBanner('👼 VALKYRIE GELDİ: CAN FULLENDİ! 👼');
+    showBanner(getBanners().valkyrieSuccess);
 
     const p = Game.player;
     const valkGroup = new THREE.Group();
@@ -2031,7 +2090,7 @@ function triggerSkill3() {
     if (Game.player.skill3Cooldown > 0 || Game.player.isShieldActive) return;
 
     sfx.playShield();
-    showBanner('🛡️ DÖNEN KALKANLAR AKTİF! (%50 DEF) 🛡️');
+    showBanner(getBanners().shieldActive);
 
     Game.player.isShieldActive = true;
     Game.player.shieldTimer = 2.0;
@@ -2193,23 +2252,24 @@ function showBanner(text, isPos = true) {
 
 function applyGateUpgrade(config) {
     const p = Game.player;
+    const B = getBanners();
 
     if (config.type === 'fireRate') {
         p.fireInterval = Math.max(0.06, Math.min(0.35, p.fireInterval - config.val));
-        showBanner(config.isPos ? '🔥 ATIŞ HIZI ARTTI!' : '⚠️ ATIŞ HIZI DÜŞTÜ!', config.isPos);
+        showBanner(config.isPos ? B.fireRateUp : B.fireRateDown, config.isPos);
     } else if (config.type === 'bullets') {
         p.bulletCount = Math.max(1, Math.min(4, p.bulletCount + config.val));
-        showBanner(config.isPos ? `⚡ +${config.val} EKSTRA MERMİ!` : '⚠️ MERMİ AZALDI!', config.isPos);
+        showBanner(config.isPos ? B.bulletsUp(config.val) : B.bulletsDown, config.isPos);
     } else if (config.type === 'damage') {
         p.damage = Math.max(5, p.damage + config.val);
-        showBanner(config.isPos ? `💥 +${config.val} HASAR GÜCÜ!` : '⚠️ HASAR GÜCÜ DÜŞTÜ!', config.isPos);
+        showBanner(config.isPos ? B.damageUp(config.val) : B.damageDown, config.isPos);
     } else if (config.type === 'heart') {
         p.hearts = Math.min(6.0, Math.max(1.0, p.hearts + config.val));
         updateHeartsUI();
-        showBanner(config.isPos ? `❤️ +${config.val} KALP KAZANDIN!` : `💔 ${config.val} KALP KAYBETTİN!`, config.isPos);
+        showBanner(config.isPos ? B.heartUp(config.val) : B.heartDown(config.val), config.isPos);
     } else if (config.type === 'clone') {
         spawnClones();
-        showBanner('👥 NEON KLON SALDIRISI! (2.5s)', true);
+        showBanner(B.cloneActive, true);
     }
 
     if (config.isPos) sfx.playPowerup();
@@ -2692,19 +2752,19 @@ function update(delta) {
                 Game.score += 200;
                 DOM.scoreText.textContent = Game.score;
                 sfx.playCoin();
-                showBanner('⭐ +200 BONUS SKOR!');
+                showBanner(getBanners().bonusScore);
             } else if (d.type === 'heart') {
                 p.hearts = Math.min(6.0, p.hearts + 0.5);
                 updateHeartsUI();
                 updateSkillsUI();
                 sfx.playHeal();
-                showBanner('❤️ +0.5 KALP!');
+                showBanner(getBanners().dropHeart);
             } else if (d.type === 'shield') {
                 p.isShieldActive = true;
                 p.shieldTimer = 2.5;
                 if (p.shieldMesh) p.shieldMesh.visible = true;
                 sfx.playShield();
-                showBanner('🛡️ DEFANS KALKANI AKTİF!');
+                showBanner(getBanners().dropShield);
             }
 
             createExplosion(d.mesh.position.x, 0.8, d.mesh.position.z, d.color, 8);
@@ -2751,7 +2811,7 @@ function update(delta) {
             if (p.invulnerableTimer <= 0) {
                 createExplosion(currentX, 0.5, sb.baseZ, 0xef4444, 14);
                 takePlayerDamage(0.5);
-                showBanner('⚠️ DÖNER BIÇAK! (-0.5 KALP)', false);
+                showBanner(getBanners().sawHit, false);
             }
         }
     }
@@ -2913,7 +2973,7 @@ function update(delta) {
         if (!sw.hasHitPlayer && sw.currentRadius >= distToBoss - 1.0) {
             sw.hasHitPlayer = true;
             takePlayerDamage(1.0);
-            showBanner('💥 KAÇILAMAZ ŞOK DALGASI! (-1 KALP)', false);
+            showBanner(getBanners().shockwaveHit, false);
         }
 
         if (sw.currentRadius >= sw.maxRadius) {
@@ -2984,7 +3044,7 @@ function enterBossFight() {
     DOM.bossSkillsBar.classList.remove('hidden');
     updateBossHUD();
     updateSkillsUI();
-    showBanner(`⚠️ DİKKAT: ${Game.boss.theme.name} ÇIKTI! ⚠️`, false);
+    showBanner(getBanners().bossSpawn(Game.boss.theme.name), false);
 }
 
 function updateBossHUD() {
@@ -3003,7 +3063,7 @@ function startBossDeath(boss) {
     boss.explodeInterval = 0.14;
 
     sfx.playExplosion();
-    showBanner(`💥 ${boss.theme.name} YENİLDİ! 💥`, true);
+    showBanner(getBanners().bossDefeated(boss.theme.name), true);
     DOM.bossHud.classList.add('hidden');
     DOM.bossSkillsBar.classList.add('hidden');
 }
@@ -3096,7 +3156,7 @@ function revivePlayer() {
     updateHeartsUI();
     updateSkillsUI();
     sfx.playHeal();
-    showBanner('❤️ CANLANDIN! +3 KALP İLE DEVAM ET!');
+    showBanner(getBanners().reviveSuccess);
 }
 
 // Rewarded Video ile Skoru 3 Katına Çıkarma
@@ -3116,7 +3176,7 @@ function multiplyScore() {
     }
 
     sfx.playVictory();
-    showBanner('🎁 TEBRİKLER: SKORUN 3X KATLANDI! 🎁');
+    showBanner(getBanners().multiplierSuccess);
 }
 
 function startGame() {
@@ -3155,6 +3215,28 @@ function resetGame(lvl) {
 
 const LANG = {
     tr: {
+        // Genel & Başlangıç Ekranı
+        startTitle: 'ZOMBIE RUNNER 3D',
+        startSubtitle: 'Kapılardan Geç, Silahını Güçlendir, Zombileri Avla!',
+        startBtn: 'OYUNA BAŞLA',
+        instructions: [
+            '<b>Sol / Sağ Ok</b> (⬅️ ➡️) veya <b>A / D</b> tuşları',
+            'Parmağını veya Fareyi <b>sağa-sola kaydır</b>',
+            '<b>Mavi kapılardan</b> geçerek güçlen',
+            'Yol sonundaki <b>Boss\'u yok et!</b>'
+        ],
+        landscapeWarn: 'Lütfen en iyi deneyim için telefonunuzu <b>dikey konuma</b> getirin.',
+
+        // HUD
+        lvlLabel: (n) => `BÖLÜM ${n}`,
+        bossMarker: 'BOSS ☠️',
+        muteTitle: 'Sesi Aç/Kapat',
+        pauseTitleBtn: 'Menü / Ayarlar',
+        statFirerate: 'Atış Hızı',
+        statPower: 'Güç',
+        statBullets: 'Mermi',
+
+        // Pause & Leaderboard
         pauseTitle: '⏸️ MENÜ',
         statScore: 'Skor',
         statHigh: 'En Yüksek',
@@ -3167,23 +3249,98 @@ const LANG = {
         leadTitle: '🏆 SKOR TABELASI',
         leadClose: '⬅️ GERİ DÖN',
         leadEmpty: 'Henüz kayıtlı skor yok.',
+
+        // GameOver & Victory
         victoryTitle: 'TEBRİKLER! 🎉',
         victoryDesc: "Bölüm Sonu Boss'unu Başarıyla Yıktın!",
         victoryScoreLabel: 'Toplam Skor:',
         nextBtn: 'SONRAKİ BÖLÜM',
-        lvlLabel: (n) => `BÖLÜM ${n}`,
-        countdown3: '3', countdown2: '2', countdown1: '1',
+        gameoverTitle: 'YENİLDİN! ☠️',
+        gameoverDesc: 'Zombiler seni alt etti.',
+        gameoverScoreLabel: 'Toplam Skor:',
+        restartGameoverBtn: 'TEKRAR DENE',
+
+        // Reklamlar
+        adBadgeRevive: '📺 REKLAM',
+        adBadgeScore: '🎁 BONUS',
         reviveBtn: 'CANLAN & DEVAM ET (+3 ❤️)',
         multiplierBtn: 'SKORU 3X KATLA (📺 İZLE)',
         multiplierUsed: '3X UYGULANDI! 🎉',
         adTitle: 'REKLAM YÜKLENİYOR...',
         adDesc: 'Ödülünüz hazırlanıyor, lütfen bekleyin.',
-        restartGameoverBtn: 'TEKRAR DENE',
-        gameoverTitle: 'YENİLDİN! ☠️',
-        gameoverDesc: 'Zombiler seni alt etti.',
-        gameoverScoreLabel: 'Toplam Skor:'
+
+        // Skiller
+        skills: {
+            s1: { title: '1. Yetenek: Meteor Çağrısı (Klavye: 1)', label: 'METEOR', sub: '-%25 CAN' },
+            s2: { title: '2. Yetenek: Valkyrie Şifası (Klavye: 2)', label: 'VALKYRIE', sub: '4 KALP FULL' },
+            s3: { title: '3. Yetenek: Dönen Kalkanlar (Klavye: 3)', label: 'KALKAN', sub: '-%50 HASAR' }
+        },
+
+        // Kapı Etiketleri
+        gates: {
+            fireRatePos: '+HIZLI ATEŞ',
+            bullets1: '+1 MERMİ',
+            damagePos: '+15 HASAR',
+            heart1: '+1 KALP ❤️',
+            heartHalf: '+0.5 KALP',
+            bullets2: '+2 MERMİ',
+            clone: '👥 KLON SALDIRISI!',
+            damageNeg: '-5 HASAR',
+            bulletsNeg: '-1 MERMİ',
+            heartNeg: '-0.5 KALP 💔',
+            fireRateNeg: '-HIZLI ATEŞ'
+        },
+
+        // Floating Banner Bildirimleri
+        banners: {
+            meteorCalled: '☄️ METEOR ÇAĞRILDI! ☄️',
+            valkyrieUsed: '👼 Valkyrie bu turda zaten kullanıldı!',
+            valkyrieHpFull: 'Canınız zaten 4 veya daha fazla!',
+            valkyrieSuccess: '👼 VALKYRIE GELDİ: CAN FULLENDİ! 👼',
+            shieldActive: '🛡️ DÖNEN KALKANLAR AKTİF! (%50 DEF) 🛡️',
+            fireRateUp: '🔥 ATIŞ HIZI ARTTI!',
+            fireRateDown: '⚠️ ATIŞ HIZI DÜŞTÜ!',
+            bulletsUp: (n) => `⚡ +${n} EKSTRA MERMİ!`,
+            bulletsDown: '⚠️ MERMİ AZALDI!',
+            damageUp: (n) => `💥 +${n} HASAR GÜCÜ!`,
+            damageDown: '⚠️ HASAR GÜCÜ DÜŞTÜ!',
+            heartUp: (n) => `❤️ +${n} KALP KAZANDIN!`,
+            heartDown: (n) => `💔 ${n} KALP KAYBETTİN!`,
+            cloneActive: '👥 NEON KLON SALDIRISI! (2.5s)',
+            bonusScore: '⭐ +200 BONUS SKOR!',
+            dropHeart: '❤️ +0.5 KALP!',
+            dropShield: '🛡️ DEFANS KALKANI AKTİF!',
+            sawHit: '⚠️ DÖNER BIÇAK! (-0.5 KALP)',
+            shockwaveHit: '💥 KAÇILAMAZ ŞOK DALGASI! (-1 KALP)',
+            bossSpawn: (name) => `⚠️ DİKKAT: ${name} ÇIKTI! ⚠️`,
+            bossDefeated: (name) => `💥 ${name} YENİLDİ! 💥`,
+            reviveSuccess: '❤️ CANLANDIN! +3 KALP İLE DEVAM ET!',
+            multiplierSuccess: '🎁 TEBRİKLER: SKORUN 3X KATLANDI! 🎁'
+        }
     },
     en: {
+        // Genel & Başlangıç Ekranı
+        startTitle: 'ZOMBIE RUNNER 3D',
+        startSubtitle: 'Pass Gates, Upgrade Weapons, Slay Zombies!',
+        startBtn: 'START GAME',
+        instructions: [
+            '<b>Left / Right Arrow</b> (⬅️ ➡️) or <b>A / D</b> keys',
+            'Swipe finger or drag mouse <b>left and right</b>',
+            'Pass through <b>blue gates</b> to power up',
+            'Defeat the <b>Boss</b> at the finish line!'
+        ],
+        landscapeWarn: 'Please rotate your device to <b>portrait mode</b> for the best experience.',
+
+        // HUD
+        lvlLabel: (n) => `LEVEL ${n}`,
+        bossMarker: 'BOSS ☠️',
+        muteTitle: 'Toggle Audio',
+        pauseTitleBtn: 'Menu / Settings',
+        statFirerate: 'Fire Rate',
+        statPower: 'Power',
+        statBullets: 'Bullets',
+
+        // Pause & Leaderboard
         pauseTitle: '⏸️ MENU',
         statScore: 'Score',
         statHigh: 'Best',
@@ -3196,44 +3353,212 @@ const LANG = {
         leadTitle: '🏆 LEADERBOARD',
         leadClose: '⬅️ BACK',
         leadEmpty: 'No scores yet.',
+
+        // GameOver & Victory
         victoryTitle: 'WELL DONE! 🎉',
         victoryDesc: 'You defeated the Boss!',
-        victoryScoreLabel: 'Total Score:',
+        victoryScoreLabel: 'Final Score:',
         nextBtn: 'NEXT LEVEL',
-        lvlLabel: (n) => `LEVEL ${n}`,
-        countdown3: '3', countdown2: '2', countdown1: '1',
+        gameoverTitle: 'DEFEATED! ☠️',
+        gameoverDesc: 'The zombie horde overwhelmed you.',
+        gameoverScoreLabel: 'Final Score:',
+        restartGameoverBtn: 'TRY AGAIN',
+
+        // Reklamlar
+        adBadgeRevive: '📺 AD',
+        adBadgeScore: '🎁 BONUS',
         reviveBtn: 'REVIVE & CONTINUE (+3 ❤️)',
         multiplierBtn: 'TRIPLE SCORE (3X 📺)',
         multiplierUsed: '3X APPLIED! 🎉',
         adTitle: 'LOADING ADVERTISEMENT...',
         adDesc: 'Preparing your reward, please wait.',
-        restartGameoverBtn: 'TRY AGAIN',
-        gameoverTitle: 'DEFEATED! ☠️',
-        gameoverDesc: 'The zombie horde overwhelmed you.',
-        gameoverScoreLabel: 'Final Score:'
+
+        // Skiller
+        skills: {
+            s1: { title: 'Skill 1: Meteor Strike (Key: 1)', label: 'METEOR', sub: '-25% HP' },
+            s2: { title: 'Skill 2: Valkyrie Heal (Key: 2)', label: 'VALKYRIE', sub: 'FULL 4 HEARTS' },
+            s3: { title: 'Skill 3: Orbiting Shields (Key: 3)', label: 'SHIELD', sub: '-50% DAMAGE' }
+        },
+
+        // Kapı Etiketleri
+        gates: {
+            fireRatePos: '+FIRE RATE',
+            bullets1: '+1 BULLET',
+            damagePos: '+15 DAMAGE',
+            heart1: '+1 HEART ❤️',
+            heartHalf: '+0.5 HEART',
+            bullets2: '+2 BULLETS',
+            clone: '👥 CLONE ATTACK!',
+            damageNeg: '-5 DAMAGE',
+            bulletsNeg: '-1 BULLET',
+            heartNeg: '-0.5 HEART 💔',
+            fireRateNeg: '-FIRE RATE'
+        },
+
+        // Floating Banner Bildirimleri
+        banners: {
+            meteorCalled: '☄️ METEOR STRIKE CALLED! ☄️',
+            valkyrieUsed: '👼 Valkyrie was already summoned this run!',
+            valkyrieHpFull: 'Your health is already 4 or higher!',
+            valkyrieSuccess: '👼 VALKYRIE ARRIVED: HEARTS RESTORED! 👼',
+            shieldActive: '🛡️ ORBITING SHIELDS ACTIVE! (50% DEF) 🛡️',
+            fireRateUp: '🔥 FIRE RATE INCREASED!',
+            fireRateDown: '⚠️ FIRE RATE DECREASED!',
+            bulletsUp: (n) => `⚡ +${n} EXTRA BULLETS!`,
+            bulletsDown: '⚠️ BULLET COUNT REDUCED!',
+            damageUp: (n) => `💥 +${n} DAMAGE POWER!`,
+            damageDown: '⚠️ DAMAGE REDUCED!',
+            heartUp: (n) => `❤️ +${n} HEART GAINED!`,
+            heartDown: (n) => `💔 ${n} HEARTS LOST!`,
+            cloneActive: '👥 NEON CLONE SQUAD ATTACK! (2.5s)',
+            bonusScore: '⭐ +200 BONUS SCORE!',
+            dropHeart: '❤️ +0.5 HEART!',
+            dropShield: '🛡️ DEFENSE SHIELD ACTIVE!',
+            sawHit: '⚠️ SAW BLADE! (-0.5 HEART)',
+            shockwaveHit: '💥 INEVITABLE SHOCKWAVE! (-1 HEART)',
+            bossSpawn: (name) => `⚠️ WARNING: ${name} APPEARED! ⚠️`,
+            bossDefeated: (name) => `💥 ${name} DEFEATED! 💥`,
+            reviveSuccess: '❤️ REVIVED! CONTINUE WITH +3 HEARTS!',
+            multiplierSuccess: '🎁 CONGRATS: SCORE MULTIPLIED BY 3X! 🎁'
+        }
     }
 };
+
+function getBanners(lang = Game.lang) {
+    const L = LANG[lang] || LANG.tr;
+    return L.banners;
+}
+
+function detectInitialLang() {
+    const saved = localStorage.getItem('zr3d_lang');
+    if (saved === 'tr' || saved === 'en') return saved;
+
+    const navLangs = navigator.languages || [navigator.language || navigator.userLanguage || ''];
+    for (let l of navLangs) {
+        if (l && l.toLowerCase().startsWith('tr')) {
+            return 'tr';
+        }
+    }
+    // Sistem dili Türkçe değilse direkt İngilizce
+    return 'en';
+}
 
 function setLang(lang) {
     Game.lang = lang;
     const L = LANG[lang] || LANG.tr;
 
-    document.getElementById('lang-tr-btn').classList.toggle('active', lang === 'tr');
-    document.getElementById('lang-en-btn').classList.toggle('active', lang === 'en');
+    // Menü Butonları
+    const trBtn = document.getElementById('lang-tr-btn');
+    const enBtn = document.getElementById('lang-en-btn');
+    if (trBtn) trBtn.classList.toggle('active', lang === 'tr');
+    if (enBtn) enBtn.classList.toggle('active', lang === 'en');
 
-    document.getElementById('txt-pause-title').textContent = L.pauseTitle;
-    document.getElementById('txt-stat-score').textContent = L.statScore;
-    document.getElementById('txt-stat-high').textContent = L.statHigh;
-    document.getElementById('txt-stat-lvl').textContent = L.statLvl;
-    document.getElementById('txt-resume-btn').textContent = L.resumeBtn;
-    document.getElementById('txt-leaderboard-btn').textContent = L.leaderboardBtn;
-    document.getElementById('txt-restart-btn').textContent = L.restartBtn;
-    document.getElementById('txt-lead-title').textContent = L.leadTitle;
-    document.getElementById('txt-lead-close').textContent = L.leadClose;
-    document.getElementById('txt-victory-title').textContent = L.victoryTitle;
-    document.getElementById('txt-victory-desc').textContent = L.victoryDesc;
-    document.getElementById('txt-victory-score-label').textContent = L.victoryScoreLabel;
-    document.getElementById('txt-next-btn').textContent = L.nextBtn;
+    // Başlangıç Ekranı Butonları
+    const startTrBtn = document.getElementById('lang-start-tr-btn');
+    const startEnBtn = document.getElementById('lang-start-en-btn');
+    if (startTrBtn) startTrBtn.classList.toggle('active', lang === 'tr');
+    if (startEnBtn) startEnBtn.classList.toggle('active', lang === 'en');
+
+    // Başlangıç Ekranı Metinleri
+    const subTitleEl = document.getElementById('txt-start-subtitle');
+    if (subTitleEl) subTitleEl.textContent = L.startSubtitle;
+    const startBtnEl = document.getElementById('txt-start-btn');
+    if (startBtnEl) startBtnEl.textContent = L.startBtn;
+
+    if (L.instructions && L.instructions.length >= 4) {
+        for (let i = 1; i <= 4; i++) {
+            const instEl = document.getElementById(`inst-item-${i}`);
+            if (instEl) instEl.innerHTML = L.instructions[i - 1];
+        }
+    }
+
+    // Yatay Mod Uyarısı
+    const lwEl = document.getElementById('txt-landscape-warn');
+    if (lwEl) lwEl.innerHTML = L.landscapeWarn;
+
+    // HUD Metinleri
+    if (DOM.levelLabel) DOM.levelLabel.textContent = L.lvlLabel(Game.level);
+    const bossMarkerEl = document.getElementById('txt-boss-marker');
+    if (bossMarkerEl) bossMarkerEl.textContent = L.bossMarker;
+
+    const muteBtnEl = document.getElementById('mute-btn');
+    if (muteBtnEl) muteBtnEl.setAttribute('title', L.muteTitle);
+    const pauseBtnEl = document.getElementById('pause-btn');
+    if (pauseBtnEl) pauseBtnEl.setAttribute('title', L.pauseTitleBtn);
+
+    const statFrEl = document.getElementById('stat-name-firerate');
+    if (statFrEl) statFrEl.textContent = L.statFirerate;
+    const statPwrEl = document.getElementById('stat-name-power');
+    if (statPwrEl) statPwrEl.textContent = L.statPower;
+    const statBulEl = document.getElementById('stat-name-bullets');
+    if (statBulEl) statBulEl.textContent = L.statBullets;
+
+    // Boss İsmi (Eğer boss sahnede aktifse)
+    if (Game.boss && Game.boss.theme && DOM.bossNameText) {
+        DOM.bossNameText.textContent = `🧟‍♂️ ${Game.boss.theme.name}`;
+    }
+
+    // Boss Skills
+    if (L.skills) {
+        const s1Btn = document.getElementById('skill-1-btn');
+        if (s1Btn) s1Btn.setAttribute('title', L.skills.s1.title);
+        const s1Lbl = document.getElementById('skill-1-label');
+        if (s1Lbl) s1Lbl.textContent = L.skills.s1.label;
+        const s1Sub = document.getElementById('skill-1-sub');
+        if (s1Sub) s1Sub.textContent = L.skills.s1.sub;
+
+        const s2Btn = document.getElementById('skill-2-btn');
+        if (s2Btn) s2Btn.setAttribute('title', L.skills.s2.title);
+        const s2Lbl = document.getElementById('skill-2-label');
+        if (s2Lbl) s2Lbl.textContent = L.skills.s2.label;
+        const s2Sub = document.getElementById('skill-2-sub');
+        if (s2Sub) s2Sub.textContent = L.skills.s2.sub;
+
+        const s3Btn = document.getElementById('skill-3-btn');
+        if (s3Btn) s3Btn.setAttribute('title', L.skills.s3.title);
+        const s3Lbl = document.getElementById('skill-3-label');
+        if (s3Lbl) s3Lbl.textContent = L.skills.s3.label;
+        const s3Sub = document.getElementById('skill-3-sub');
+        if (s3Sub) s3Sub.textContent = L.skills.s3.sub;
+    }
+
+    // Pause Menü
+    const pTitle = document.getElementById('txt-pause-title');
+    if (pTitle) pTitle.textContent = L.pauseTitle;
+    const pScore = document.getElementById('txt-stat-score');
+    if (pScore) pScore.textContent = L.statScore;
+    const pHigh = document.getElementById('txt-stat-high');
+    if (pHigh) pHigh.textContent = L.statHigh;
+    const pLvl = document.getElementById('txt-stat-lvl');
+    if (pLvl) pLvl.textContent = L.statLvl;
+    const pResume = document.getElementById('txt-resume-btn');
+    if (pResume) pResume.textContent = L.resumeBtn;
+    const pLead = document.getElementById('txt-leaderboard-btn');
+    if (pLead) pLead.textContent = L.leaderboardBtn;
+    const pRestart = document.getElementById('txt-restart-btn');
+    if (pRestart) pRestart.textContent = L.restartBtn;
+
+    // Leaderboard
+    const lTitle = document.getElementById('txt-lead-title');
+    if (lTitle) lTitle.textContent = L.leadTitle;
+    const lClose = document.getElementById('txt-lead-close');
+    if (lClose) lClose.textContent = L.leadClose;
+
+    // Victory Ekranı
+    const vTitle = document.getElementById('txt-victory-title');
+    if (vTitle) vTitle.textContent = L.victoryTitle;
+    const vDesc = document.getElementById('txt-victory-desc');
+    if (vDesc) vDesc.textContent = L.victoryDesc;
+    const vScoreLabel = document.getElementById('txt-victory-score-label');
+    if (vScoreLabel) vScoreLabel.textContent = L.victoryScoreLabel;
+    const vNext = document.getElementById('txt-next-btn');
+    if (vNext) vNext.textContent = L.nextBtn;
+
+    // Reklam Rozetleri ve Butonları
+    const reviveBadge = document.getElementById('ad-badge-revive');
+    if (reviveBadge) reviveBadge.textContent = L.adBadgeRevive;
+    const scoreBadge = document.getElementById('ad-badge-score');
+    if (scoreBadge) scoreBadge.textContent = L.adBadgeScore;
 
     const reviveEl = document.getElementById('txt-revive-btn');
     if (reviveEl) reviveEl.textContent = L.reviveBtn;
@@ -3241,17 +3566,23 @@ function setLang(lang) {
     const multEl = document.getElementById('txt-multiplier-btn');
     if (multEl && (!DOM.rewardScoreBtn || !DOM.rewardScoreBtn.disabled)) multEl.textContent = L.multiplierBtn;
 
+    const adTitleEl = document.getElementById('ad-overlay-title');
+    if (adTitleEl) adTitleEl.textContent = L.adTitle;
+    const adDescEl = document.getElementById('ad-overlay-desc');
+    if (adDescEl) adDescEl.textContent = L.adDesc;
+
+    // GameOver Ekranı
     const goTitle = document.getElementById('txt-gameover-title');
     if (goTitle) goTitle.textContent = L.gameoverTitle;
-
     const goDesc = document.getElementById('txt-gameover-desc');
     if (goDesc) goDesc.textContent = L.gameoverDesc;
-
     const goScoreLabel = document.getElementById('txt-gameover-score-label');
     if (goScoreLabel) goScoreLabel.textContent = L.gameoverScoreLabel;
-
     const goRestart = document.getElementById('txt-restart-gameover-btn');
     if (goRestart) goRestart.textContent = L.restartGameoverBtn;
+
+    // Pistteki Mevcut Kapıların Dokularını Yeni Dille Yenile
+    refreshGateTextures(lang);
 
     localStorage.setItem('zr3d_lang', lang);
 }

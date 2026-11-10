@@ -12,7 +12,7 @@
     <!-- Yatay Mod Uyarısı (Mobil Cihazlar İçin) -->
     <div id="landscape-warning">
         <span class="lw-icon">📱</span>
-        <p>Lütfen en iyi deneyim için telefonunuzu <b>dikey konuma</b> getirin.</p>
+        <p id="txt-landscape-warn">Lütfen en iyi deneyim için telefonunuzu <b>dikey konuma</b> getirin.</p>
     </div>
 
     <div id="game-container">
@@ -38,7 +38,7 @@
                     <div class="hud-progress-container">
                         <div class="progress-labels">
                             <span id="level-label">BÖLÜM 1</span>
-                            <span>BOSS ☠️</span>
+                            <span id="txt-boss-marker">BOSS ☠️</span>
                         </div>
                         <div class="progress-bar-bg">
                             <div id="progress-bar-fill"></div>
@@ -79,35 +79,35 @@
                 <button class="skill-btn" id="skill-1-btn" title="1. Skill: Meteor Çağrısı (Klavye: 1)">
                     <span class="skill-key">1</span>
                     <span class="skill-icon">☄️</span>
-                    <span class="skill-label">METEOR</span>
-                    <span class="skill-sub">-%25 CAN</span>
+                    <span class="skill-label" id="skill-1-label">METEOR</span>
+                    <span class="skill-sub" id="skill-1-sub">-%25 CAN</span>
                 </button>
                 <button class="skill-btn" id="skill-2-btn" title="2. Skill: Valkyrie Şifası (Klavye: 2)">
                     <span class="skill-key">2</span>
                     <span class="skill-icon">👼</span>
-                    <span class="skill-label">VALKYRIE</span>
-                    <span class="skill-sub">4 KALP FULL</span>
+                    <span class="skill-label" id="skill-2-label">VALKYRIE</span>
+                    <span class="skill-sub" id="skill-2-sub">4 KALP FULL</span>
                 </button>
                 <button class="skill-btn" id="skill-3-btn" title="3. Skill: Dönen Kalkanlar (Klavye: 3)">
                     <span class="skill-key">3</span>
                     <span class="skill-icon">🛡️</span>
-                    <span class="skill-label">KALKAN</span>
-                    <span class="skill-sub">-%50 HASAR</span>
+                    <span class="skill-label" id="skill-3-label">KALKAN</span>
+                    <span class="skill-sub" id="skill-3-sub">-%50 HASAR</span>
                 </button>
             </div>
 
             <!-- Karakter İstatistik Göstergesi (Alt Panel) -->
             <div class="hud-bottom">
                 <div class="stat-badge" id="stat-firerate">
-                    <span class="stat-name">Atış Hızı</span>
+                    <span class="stat-name" id="stat-name-firerate">Atış Hızı</span>
                     <span class="stat-val" id="stat-firerate-val">1.0x</span>
                 </div>
                 <div class="stat-badge" id="stat-power">
-                    <span class="stat-name">Güç</span>
+                    <span class="stat-name" id="stat-name-power">Güç</span>
                     <span class="stat-val" id="stat-power-val">Lv.1</span>
                 </div>
                 <div class="stat-badge" id="stat-bullets">
-                    <span class="stat-name">Mermi</span>
+                    <span class="stat-name" id="stat-name-bullets">Mermi</span>
                     <span class="stat-val" id="stat-bullets-val">1</span>
                 </div>
             </div>
@@ -119,27 +119,33 @@
         <!-- Başlangıç Ekranı -->
         <div id="start-screen" class="overlay-screen">
             <div class="overlay-content">
+                <div class="lang-toggle-group" style="margin-bottom: 12px; justify-content: center;">
+                    <button class="lang-btn active" id="lang-start-tr-btn">TR 🇹🇷</button>
+                    <button class="lang-btn" id="lang-start-en-btn">EN 🇬🇧</button>
+                </div>
                 <h1 class="game-title">ZOMBIE<br><span class="highlight">RUNNER 3D</span></h1>
-                <p class="game-subtitle">Kapılardan Geç, Silahını Güçlendir, Zombileri Avla!</p>
+                <p class="game-subtitle" id="txt-start-subtitle">Kapılardan Geç, Silahını Güçlendir, Zombileri Avla!</p>
                 <div class="instructions-card">
                     <div class="inst-item">
                         <span class="inst-icon">⌨️</span>
-                        <span><b>Sol / Sağ Ok</b> (⬅️ ➡️) veya <b>A / D</b> tuşları</span>
+                        <span id="inst-item-1"><b>Sol / Sağ Ok</b> (⬅️ ➡️) veya <b>A / D</b> tuşları</span>
                     </div>
                     <div class="inst-item">
                         <span class="inst-icon">👆</span>
-                        <span>Parmağını veya Fareyi <b>sağa-sola kaydır</b></span>
+                        <span id="inst-item-2">Parmağını veya Fareyi <b>sağa-sola kaydır</b></span>
                     </div>
                     <div class="inst-item">
                         <span class="inst-icon">🚪</span>
-                        <span><b>Mavi kapılardan</b> geçerek güçlen</span>
+                        <span id="inst-item-3"><b>Mavi kapılardan</b> geçerek güçlen</span>
                     </div>
                     <div class="inst-item">
                         <span class="inst-icon">🧟</span>
-                        <span>Yol sonundaki <b>Boss'u yok et!</b></span>
+                        <span id="inst-item-4">Yol sonundaki <b>Boss'u yok et!</b></span>
                     </div>
                 </div>
-                <button id="start-btn" class="primary-btn pulse-anim">OYUNA BAŞLA</button>
+                <button id="start-btn" class="primary-btn pulse-anim">
+                    <span id="txt-start-btn">OYUNA BAŞLA</span>
+                </button>
             </div>
         </div>
 
@@ -154,7 +160,7 @@
                 </div>
                 <!-- Rewarded Video: Revive / Canlanma Butonu -->
                 <button id="reward-revive-btn" class="reward-ad-btn pulse-anim">
-                    <span class="ad-badge">📺 REKLAM</span>
+                    <span class="ad-badge" id="ad-badge-revive">📺 REKLAM</span>
                     <span id="txt-revive-btn">CANLAN & DEVAM ET (+3 ❤️)</span>
                 </button>
                 <button id="restart-btn" class="primary-btn" style="margin-top: 8px;">
@@ -174,7 +180,7 @@
                 </div>
                 <!-- Rewarded Video: Skor 3x Çarpanı -->
                 <button id="reward-score-btn" class="reward-ad-btn reward-gold-anim">
-                    <span class="ad-badge">🎁 BONUS</span>
+                    <span class="ad-badge" id="ad-badge-score">🎁 BONUS</span>
                     <span id="txt-multiplier-btn">SKORU 3X KATLA (📺 İZLE)</span>
                 </button>
                 <button id="next-btn" class="primary-btn pulse-anim" style="margin-top: 8px;">

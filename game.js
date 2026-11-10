@@ -195,6 +195,126 @@ class SoundFX {
 const sfx = new SoundFX();
 
 // ==========================================
+// EVRENSEL REKLAM YÖNETİCİSİ (Universal AdManager)
+// CrazyGames v3, Poki SDK, Yandex Games & Mock Fallback
+// ==========================================
+const AdManager = {
+    platform: 'mock',
+    lastInterstitialTime: 0,
+    interstitialCooldown: 45, // saniye
+
+    init: async function() {
+        try {
+            if (window.CrazyGames && window.CrazyGames.SDK) {
+                this.platform = 'crazygames';
+                await window.CrazyGames.SDK.init();
+                console.log('[AdManager] CrazyGames SDK v3 Aktif');
+            } else if (window.PokiSDK) {
+                this.platform = 'poki';
+                await window.PokiSDK.init();
+                console.log('[AdManager] Poki SDK Aktif');
+            } else if (window.YaGames) {
+                this.platform = 'yandex';
+                console.log('[AdManager] Yandex Games SDK Aktif');
+            } else {
+                this.platform = 'mock';
+                console.log('[AdManager] Yerel/Mock Reklam Simülasyonu Devrede');
+            }
+        } catch (err) {
+            console.warn('[AdManager] SDK Başlatma Hatası, Mock Fallback:', err);
+            this.platform = 'mock';
+        }
+    },
+
+    showInterstitial: function(onComplete) {
+        const now = Date.now() / 1000;
+        if (now - this.lastInterstitialTime < this.interstitialCooldown) {
+            if (onComplete) onComplete();
+            return;
+        }
+        this.lastInterstitialTime = now;
+
+        const finish = () => {
+            if (onComplete) onComplete();
+        };
+
+        if (this.platform === 'crazygames' && window.CrazyGames?.SDK?.ad) {
+            window.CrazyGames.SDK.ad.requestAd('midgame', {
+                adFinished: finish,
+                adError: finish
+            });
+        } else if (this.platform === 'poki' && window.PokiSDK) {
+            window.PokiSDK.commercialBreak().then(finish).catch(finish);
+        } else if (this.platform === 'yandex' && window.ysdk) {
+            window.ysdk.adv.showFullscreenAdv({
+                callbacks: { onClose: finish, onError: finish }
+            });
+        } else {
+            // Mock: Hızlı geçiş
+            finish();
+        }
+    },
+
+    showRewarded: function(rewardType, onSuccess, onFailure) {
+        const handleSuccess = () => {
+            if (onSuccess) onSuccess();
+        };
+        const handleFailure = () => {
+            if (onFailure) onFailure();
+        };
+
+        if (this.platform === 'crazygames' && window.CrazyGames?.SDK?.ad) {
+            window.CrazyGames.SDK.ad.requestAd('rewarded', {
+                adFinished: handleSuccess,
+                adError: handleFailure
+            });
+        } else if (this.platform === 'poki' && window.PokiSDK) {
+            window.PokiSDK.rewardedBreak().then(success => {
+                if (success) handleSuccess();
+                else handleFailure();
+            }).catch(handleFailure);
+        } else if (this.platform === 'yandex' && window.ysdk) {
+            window.ysdk.adv.showRewardedVideo({
+                callbacks: {
+                    onRewarded: handleSuccess,
+                    onError: handleFailure,
+                    onClose: () => {}
+                }
+            });
+        } else {
+            // Mock Rewarded Video Simülasyonu (Kullanıcının Yerelde Denemesi İçin 3s Sayaç)
+            this.showMockRewardedModal(rewardType, handleSuccess);
+        }
+    },
+
+    showMockRewardedModal: function(rewardType, onFinished) {
+        if (!DOM.adOverlay) {
+            onFinished();
+            return;
+        }
+
+        const L = LANG[Game.lang] || LANG.tr;
+        DOM.adOverlayTitle.textContent = L.adTitle || 'REKLAM YÜKLENİYOR...';
+        DOM.adOverlayDesc.textContent = L.adDesc || 'Ödülünüz hazırlanıyor, lütfen bekleyin.';
+
+        let count = 3;
+        DOM.adCountdownVal.textContent = count;
+        DOM.adOverlay.classList.remove('hidden');
+
+        const timer = setInterval(() => {
+            count--;
+            if (count > 0) {
+                DOM.adCountdownVal.textContent = count;
+            } else {
+                clearInterval(timer);
+                DOM.adOverlay.classList.add('hidden');
+                onFinished();
+            }
+        }, 850);
+    }
+};
+
+// ==========================================
 // 10 BOSS TEMASI & ÖZELLİKLERİ
 // ==========================================
 const BOSS_THEMES = [
@@ -299,7 +419,13 @@ const DOM = {
     victoryScreen: null,
     gameoverScore: null,
     victoryScore: null,
-    muteIcon: null
+    muteIcon: null,
+    rewardReviveBtn: null,
+    rewardScoreBtn: null,
+    adOverlay: null,
+    adOverlayTitle: null,
+    adOverlayDesc: null,
+    adCountdownVal: null
 };
 
 // ==========================================
@@ -486,6 +612,15 @@ function initThree() {
     DOM.gameoverScore = document.getElementById('gameover-score');
     DOM.victoryScore = document.getElementById('victory-score');
     DOM.muteIcon = document.getElementById('mute-icon');
+    DOM.rewardReviveBtn = document.getElementById('reward-revive-btn');
+    DOM.rewardScoreBtn = document.getElementById('reward-score-btn');
+    DOM.adOverlay = document.getElementById('ad-overlay');
+    DOM.adOverlayTitle = document.getElementById('ad-overlay-title');
+    DOM.adOverlayDesc = document.getElementById('ad-overlay-desc');
+    DOM.adCountdownVal = document.getElementById('ad-countdown-val');
+
+    // Reklam SDK Başlatıcı
+    AdManager.init();
 
     // Yüklü dil ayarını uygula
     const savedLang = localStorage.getItem('zr3d_lang') || 'tr';
@@ -608,13 +743,34 @@ function setupControls() {
     });
 
     document.getElementById('restart-btn').addEventListener('click', () => {
-        resetGame(Game.level);
+        AdManager.showInterstitial(() => {
+            resetGame(Game.level);
+        });
     });
 
     document.getElementById('next-btn').addEventListener('click', () => {
-        Game.level++;
-        resetGame(Game.level);
+        AdManager.showInterstitial(() => {
+            Game.level++;
+            resetGame(Game.level);
+        });
     });
+
+    // Rewarded Video Butonları
+    if (DOM.rewardReviveBtn) {
+        DOM.rewardReviveBtn.addEventListener('click', () => {
+            AdManager.showRewarded('revive', () => {
+                revivePlayer();
+            });
+        });
+    }
+
+    if (DOM.rewardScoreBtn) {
+        DOM.rewardScoreBtn.addEventListener('click', () => {
+            AdManager.showRewarded('score_multiplier', () => {
+                multiplyScore();
+            });
+        });
+    }
 
     document.getElementById('mute-btn').addEventListener('click', () => {
         sfx.init();
@@ -2873,6 +3029,15 @@ function triggerVictory() {
 
     saveScore(Game.score, Game.level);
 
+    // Skor 3X butonunu sıfırla
+    if (DOM.rewardScoreBtn) {
+        DOM.rewardScoreBtn.disabled = false;
+        DOM.rewardScoreBtn.classList.remove('disabled');
+        const L = LANG[Game.lang] || LANG.tr;
+        const txtEl = document.getElementById('txt-multiplier-btn');
+        if (txtEl) txtEl.textContent = L.multiplierBtn || 'SKORU 3X KATLA (📺 İZLE)';
+    }
+
     setTimeout(() => {
         DOM.bossHud.classList.add('hidden');
         DOM.bossSkillsBar.classList.add('hidden');
@@ -2891,11 +3056,67 @@ function triggerGameOver() {
 
     saveScore(Game.score, Game.level);
 
+    // Revive butonunu aktif tut
+    if (DOM.rewardReviveBtn) {
+        DOM.rewardReviveBtn.disabled = false;
+        DOM.rewardReviveBtn.classList.remove('disabled');
+    }
+
     setTimeout(() => {
         DOM.bossHud.classList.add('hidden');
         DOM.bossSkillsBar.classList.add('hidden');
         DOM.gameoverScreen.classList.remove('hidden');
     }, 800);
+}
+
+// Rewarded Video ile Oyuncuyu Canlandırma (Revive)
+function revivePlayer() {
+    const p = Game.player;
+    p.hearts = 3.0;
+    p.invulnerableTimer = 3.0; // 3 saniye kalkan koruması
+    p.mesh.visible = true;
+
+    // Yakındaki tehlikeleri temizle (Safe-Zone Revive Blast)
+    for (let i = Game.enemies.length - 1; i >= 0; i--) {
+        const e = Game.enemies[i];
+        const distSq = (p.x - e.mesh.position.x)**2 + (p.z - e.mesh.position.z)**2;
+        if (distSq < 36) { // 6 metre çapındaki zombileri havaya uçur
+            createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, 0x10b981, 15);
+            disposeHierarchy(e.mesh);
+            scene.remove(e.mesh);
+            if (e.hpBarMesh) scene.remove(e.hpBarMesh);
+            Game.enemies.splice(i, 1);
+        }
+    }
+
+    // Ekranı kapat ve oyunu sürdür
+    DOM.gameoverScreen.classList.add('hidden');
+    Game.state = (Game.boss && Game.boss.active) ? GAME_STATE.BOSS_FIGHT : GAME_STATE.PLAYING;
+
+    updateHeartsUI();
+    updateSkillsUI();
+    sfx.playHeal();
+    showBanner('❤️ CANLANDIN! +3 KALP İLE DEVAM ET!');
+}
+
+// Rewarded Video ile Skoru 3 Katına Çıkarma
+function multiplyScore() {
+    if (DOM.rewardScoreBtn && DOM.rewardScoreBtn.disabled) return;
+
+    Game.score = Math.round(Game.score * 3);
+    DOM.victoryScore.textContent = Game.score;
+    saveScore(Game.score, Game.level);
+
+    if (DOM.rewardScoreBtn) {
+        DOM.rewardScoreBtn.disabled = true;
+        DOM.rewardScoreBtn.classList.add('disabled');
+        const L = LANG[Game.lang] || LANG.tr;
+        const txtEl = document.getElementById('txt-multiplier-btn');
+        if (txtEl) txtEl.textContent = L.multiplierUsed || '3X UYGULANDI! 🎉';
+    }
+
+    sfx.playVictory();
+    showBanner('🎁 TEBRİKLER: SKORUN 3X KATLANDI! 🎁');
 }
 
 function startGame() {
@@ -2952,6 +3173,15 @@ const LANG = {
         nextBtn: 'SONRAKİ BÖLÜM',
         lvlLabel: (n) => `BÖLÜM ${n}`,
         countdown3: '3', countdown2: '2', countdown1: '1',
+        reviveBtn: 'CANLAN & DEVAM ET (+3 ❤️)',
+        multiplierBtn: 'SKORU 3X KATLA (📺 İZLE)',
+        multiplierUsed: '3X UYGULANDI! 🎉',
+        adTitle: 'REKLAM YÜKLENİYOR...',
+        adDesc: 'Ödülünüz hazırlanıyor, lütfen bekleyin.',
+        restartGameoverBtn: 'TEKRAR DENE',
+        gameoverTitle: 'YENİLDİN! ☠️',
+        gameoverDesc: 'Zombiler seni alt etti.',
+        gameoverScoreLabel: 'Toplam Skor:'
     },
     en: {
         pauseTitle: '⏸️ MENU',
@@ -2972,12 +3202,21 @@ const LANG = {
         nextBtn: 'NEXT LEVEL',
         lvlLabel: (n) => `LEVEL ${n}`,
         countdown3: '3', countdown2: '2', countdown1: '1',
+        reviveBtn: 'REVIVE & CONTINUE (+3 ❤️)',
+        multiplierBtn: 'TRIPLE SCORE (3X 📺)',
+        multiplierUsed: '3X APPLIED! 🎉',
+        adTitle: 'LOADING ADVERTISEMENT...',
+        adDesc: 'Preparing your reward, please wait.',
+        restartGameoverBtn: 'TRY AGAIN',
+        gameoverTitle: 'DEFEATED! ☠️',
+        gameoverDesc: 'The zombie horde overwhelmed you.',
+        gameoverScoreLabel: 'Final Score:'
     }
 };
 
 function setLang(lang) {
     Game.lang = lang;
-    const L = LANG[lang];
+    const L = LANG[lang] || LANG.tr;
 
     document.getElementById('lang-tr-btn').classList.toggle('active', lang === 'tr');
     document.getElementById('lang-en-btn').classList.toggle('active', lang === 'en');
@@ -2995,6 +3234,24 @@ function setLang(lang) {
     document.getElementById('txt-victory-desc').textContent = L.victoryDesc;
     document.getElementById('txt-victory-score-label').textContent = L.victoryScoreLabel;
     document.getElementById('txt-next-btn').textContent = L.nextBtn;
+
+    const reviveEl = document.getElementById('txt-revive-btn');
+    if (reviveEl) reviveEl.textContent = L.reviveBtn;
+
+    const multEl = document.getElementById('txt-multiplier-btn');
+    if (multEl && (!DOM.rewardScoreBtn || !DOM.rewardScoreBtn.disabled)) multEl.textContent = L.multiplierBtn;
+
+    const goTitle = document.getElementById('txt-gameover-title');
+    if (goTitle) goTitle.textContent = L.gameoverTitle;
+
+    const goDesc = document.getElementById('txt-gameover-desc');
+    if (goDesc) goDesc.textContent = L.gameoverDesc;
+
+    const goScoreLabel = document.getElementById('txt-gameover-score-label');
+    if (goScoreLabel) goScoreLabel.textContent = L.gameoverScoreLabel;
+
+    const goRestart = document.getElementById('txt-restart-gameover-btn');
+    if (goRestart) goRestart.textContent = L.restartGameoverBtn;
 
     localStorage.setItem('zr3d_lang', lang);
 }

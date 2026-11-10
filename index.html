@@ -146,13 +146,20 @@
         <!-- Oyun Bitti (Game Over) Ekranı -->
         <div id="gameover-screen" class="overlay-screen hidden">
             <div class="overlay-content">
-                <h2 class="result-title fail">YENİLDİN!</h2>
-                <p class="result-desc">Zombiler seni alt etti.</p>
+                <h2 class="result-title fail" id="txt-gameover-title">YENİLDİN! ☠️</h2>
+                <p class="result-desc" id="txt-gameover-desc">Zombiler seni alt etti.</p>
                 <div class="final-score-box">
-                    <span>Toplam Skor:</span>
+                    <span id="txt-gameover-score-label">Toplam Skor:</span>
                     <h3 id="gameover-score">0</h3>
                 </div>
-                <button id="restart-btn" class="primary-btn">TEKRAR DENE</button>
+                <!-- Rewarded Video: Revive / Canlanma Butonu -->
+                <button id="reward-revive-btn" class="reward-ad-btn pulse-anim">
+                    <span class="ad-badge">📺 REKLAM</span>
+                    <span id="txt-revive-btn">CANLAN & DEVAM ET (+3 ❤️)</span>
+                </button>
+                <button id="restart-btn" class="primary-btn" style="margin-top: 8px;">
+                    <span id="txt-restart-gameover-btn">TEKRAR DENE</span>
+                </button>
             </div>
         </div>
 
@@ -165,9 +172,24 @@
                     <span id="txt-victory-score-label">Toplam Skor:</span>
                     <h3 id="victory-score">0</h3>
                 </div>
-                <button id="next-btn" class="primary-btn pulse-anim">
+                <!-- Rewarded Video: Skor 3x Çarpanı -->
+                <button id="reward-score-btn" class="reward-ad-btn reward-gold-anim">
+                    <span class="ad-badge">🎁 BONUS</span>
+                    <span id="txt-multiplier-btn">SKORU 3X KATLA (📺 İZLE)</span>
+                </button>
+                <button id="next-btn" class="primary-btn pulse-anim" style="margin-top: 8px;">
                     <span id="txt-next-btn">SONRAKİ BÖLÜM</span>
                 </button>
+            </div>
+        </div>
+
+        <!-- Reklam Simülasyonu / SDK Geçiş Ekranı (Mock / Universal Overlay) -->
+        <div id="ad-overlay" class="overlay-screen hidden">
+            <div class="overlay-content ad-modal-content">
+                <div class="ad-spinner"></div>
+                <h3 id="ad-overlay-title">REKLAM YÜKLENİYOR...</h3>
+                <p id="ad-overlay-desc">Ödülünüz hazırlanıyor, lütfen bekleyin.</p>
+                <div class="ad-countdown" id="ad-countdown-val">3</div>
             </div>
         </div>
 

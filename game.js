@@ -264,7 +264,6 @@ const Game = {
     clones: [],
     cloneTimer: 0,
     collapseSegments: [],
-    skywayBridges: [],
 
     isDragging: false,
     dragStartX: 0,
@@ -971,70 +970,6 @@ function buildWorld() {
     gridHelper.position.set(0, -0.3, Game.bossArenaZ / 2);
     worldGroup.add(gridHelper);
 
-    // ==========================================
-    // 3D NEON ÜST KÖPRÜ & YÜKSELEN RAMPALAR (SKYWAY OVERPASS)
-    // ==========================================
-    Game.skywayBridges = [];
-    const bridgeZs = [-150, -270];
-    const bridgeMat = new THREE.MeshStandardMaterial({ color: 0x181e38, metalness: 0.6, roughness: 0.3 });
-    const bridgeRailMat = new THREE.MeshBasicMaterial({ color: theme.lCurb });
-
-    bridgeZs.forEach((bZ) => {
-        if (bZ < Game.bossArenaZ + 60) return;
-        const bGroup = new THREE.Group();
-        const bW = 4.2;
-        const bH = 2.4;
-        const rampLen = 8;
-        const spanLen = 22;
-
-        // 1. Tırmanma Rampası
-        const upRamp = new THREE.Mesh(new THREE.BoxGeometry(bW, 0.25, rampLen), bridgeMat);
-        upRamp.rotation.x = Math.atan2(bH, rampLen);
-        upRamp.position.set(0, bH / 2, bZ - rampLen / 2);
-        bGroup.add(upRamp);
-
-        // 2. Havada Asılı Üst Köprü Platformu
-        const bridgePlatform = new THREE.Mesh(new THREE.BoxGeometry(bW, 0.3, spanLen), bridgeMat);
-        bridgePlatform.position.set(0, bH, bZ - rampLen - spanLen / 2);
-        bGroup.add(bridgePlatform);
-
-        // Köprü kenar neon trabzanları (sol & sağ)
-        [-bW / 2 + 0.1, bW / 2 - 0.1].forEach(rx => {
-            const rail = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.6, spanLen), bridgeRailMat);
-            rail.position.set(rx, bH + 0.35, bZ - rampLen - spanLen / 2);
-            bGroup.add(rail);
-        });
-
-        // 3. İniş Rampası
-        const downRamp = new THREE.Mesh(new THREE.BoxGeometry(bW, 0.25, rampLen), bridgeMat);
-        downRamp.rotation.x = -Math.atan2(bH, rampLen);
-        downRamp.position.set(0, bH / 2, bZ - rampLen - spanLen - rampLen / 2);
-        bGroup.add(downRamp);
-
-        // Köprü destek ayakları
-        const pillarGeo = new THREE.BoxGeometry(0.4, bH, 0.4);
-        [-bW / 2 + 0.3, bW / 2 - 0.3].forEach(px => {
-            const p1 = new THREE.Mesh(pillarGeo, bridgeMat);
-            p1.position.set(px, bH / 2, bZ - rampLen - 2);
-            bGroup.add(p1);
-
-            const p2 = new THREE.Mesh(pillarGeo, bridgeMat);
-            p2.position.set(px, bH / 2, bZ - rampLen - spanLen + 2);
-            bGroup.add(p2);
-        });
-
-        worldGroup.add(bGroup);
-
-        Game.skywayBridges.push({
-            startZ: bZ,
-            upEnd: bZ - rampLen,
-            spanEnd: bZ - rampLen - spanLen,
-            totalEnd: bZ - rampLen - spanLen - rampLen,
-            width: bW,
-            height: bH
-        });
-    });
-
     // Çöken Yol Segmentleri (Boss'a yaklaşırken, son 100 birim)
     Game.collapseSegments = [];
     const collapseStart = Game.bossArenaZ + 100;
@@ -1325,7 +1260,6 @@ function clearLevelEntities() {
     Game.cloneTimer = 0;
 
     Game.collapseSegments = [];
-    Game.skywayBridges = [];
 
     if (Game.boss && Game.boss.mesh) {
         disposeHierarchy(Game.boss.mesh);
@@ -2052,18 +1986,17 @@ function shootBullets() {
     else if (count === 3) spreads.push(-0.5, 0, 0.5);
     else if (count >= 4) spreads.push(-0.7, -0.25, 0.25, 0.7);
 
-    const pY = 1.0 + (p.y || 0);
     for (let i = 0; i < spreads.length; i++) {
         const offset = spreads[i];
         const bullet = new THREE.Mesh(BULLET_GEO, BULLET_MAT);
         bullet.userData.shared = true;
-        bullet.position.set(p.x + offset, pY, p.z - 0.8);
+        bullet.position.set(p.x + offset, 1.0, p.z - 0.8);
         scene.add(bullet);
 
         Game.bullets.push({
             mesh: bullet,
             x: bullet.position.x,
-            y: pY,
+            y: 1.0,
             z: bullet.position.z,
             damage: p.damage,
             speed: p.bulletSpeed,
@@ -2304,34 +2237,7 @@ function update(delta) {
     if (Game.keys.right) p.targetX = Math.min(limit, p.targetX + keyboardSpeed * delta);
 
     p.x += (p.targetX - p.x) * 18 * delta;
-
-    // 3D Neon Üst Köprü (Skyway Bridge) Yükseklik Hesabı
-    let targetY = 0;
-    if (Game.skywayBridges && Game.skywayBridges.length > 0) {
-        for (let bi = 0; bi < Game.skywayBridges.length; bi++) {
-            const b = Game.skywayBridges[bi];
-            if (Math.abs(p.x) <= b.width / 2 + 0.2) {
-                if (p.z <= b.startZ && p.z >= b.upEnd) {
-                    // Tırmanma rampası
-                    const prog = (b.startZ - p.z) / (b.startZ - b.upEnd);
-                    targetY = prog * b.height;
-                    break;
-                } else if (p.z < b.upEnd && p.z > b.spanEnd) {
-                    // Düz köprü platformu
-                    targetY = b.height;
-                    break;
-                } else if (p.z <= b.spanEnd && p.z >= b.totalEnd) {
-                    // İniş rampası
-                    const prog = (p.z - b.totalEnd) / (b.spanEnd - b.totalEnd);
-                    targetY = prog * b.height;
-                    break;
-                }
-            }
-        }
-    }
-    p.y = p.y || 0;
-    p.y += (targetY - p.y) * 16 * delta;
-    p.mesh.position.set(p.x, p.y, p.z);
+    p.mesh.position.set(p.x, 0, p.z);
 
     const runCycle = Math.sin(clock.getElapsedTime() * 14);
     p.limbs.leftLeg.rotation.x = runCycle * 0.6;
@@ -2340,9 +2246,9 @@ function update(delta) {
     p.limbs.rightArm.rotation.x = runCycle * 0.4;
 
     camera.position.x += (p.x * 0.6 - camera.position.x) * 8 * delta;
-    camera.position.y = 5.2 + p.y * 0.6;
+    camera.position.y = 5.2;
     camera.position.z = p.z + 8.5;
-    camera.lookAt(p.x * 0.3, 1.4 + p.y * 0.4, p.z - 7);
+    camera.lookAt(p.x * 0.3, 1.4, p.z - 7);
 
     p.fireTimer += delta;
     if (p.fireTimer >= p.fireInterval) {

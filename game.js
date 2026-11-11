@@ -485,6 +485,7 @@ const Game = {
 // i18n için sık kullanılan elementler de önbelleğe alınıyor
 const DOM = {
     container: null,
+    gameContainer: null,
     levelDisplay: null,
     levelLabel: null,
     scoreText: null,
@@ -588,6 +589,8 @@ let UNIT_BOX_GEO, BEACON_GEO;
 let CLONE_BODY_GEO, CLONE_HEAD_GEO, CLONE_GLOW_GEO;
 let CAPACITOR_TORUS_GEO;
 let ROAD_SEG_GEO, CRACK_GEO;
+let GATE_FIELD_GEO, GATE_TOPBAR_GEO, GATE_TEXT_GEO;
+let GATE_POS_FIELD_MAT, GATE_NEG_FIELD_MAT, GATE_BORDER_MAT;
 
 const particleMatCache = new Map();
 function getParticleMaterial(color) {
@@ -700,6 +703,36 @@ function initSharedResources() {
 
     CRACK_GEO = new THREE.PlaneGeometry(Game.trackWidth * 0.85, 0.16);
     CRACK_GEO.userData = { shared: true };
+
+    const gateW = Game.trackWidth / 2;
+    const gateH = 3.6;
+    GATE_FIELD_GEO = new THREE.PlaneGeometry(gateW - 0.2, gateH - 0.4);
+    GATE_FIELD_GEO.userData = { shared: true };
+
+    GATE_TOPBAR_GEO = new THREE.BoxGeometry(gateW, 0.2, 0.4);
+    GATE_TOPBAR_GEO.userData = { shared: true };
+
+    GATE_TEXT_GEO = new THREE.PlaneGeometry(gateW * 0.9, 1.4);
+    GATE_TEXT_GEO.userData = { shared: true };
+
+    GATE_POS_FIELD_MAT = new THREE.MeshBasicMaterial({
+        color: 0x00f2fe,
+        transparent: true,
+        opacity: 0.35,
+        side: THREE.DoubleSide
+    });
+    GATE_POS_FIELD_MAT.userData = { shared: true };
+
+    GATE_NEG_FIELD_MAT = new THREE.MeshBasicMaterial({
+        color: 0xef4444,
+        transparent: true,
+        opacity: 0.35,
+        side: THREE.DoubleSide
+    });
+    GATE_NEG_FIELD_MAT.userData = { shared: true };
+
+    GATE_BORDER_MAT = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    GATE_BORDER_MAT.userData = { shared: true };
 }
 
 // Güvenli Three.js nesne ve bellek temizliği
@@ -731,6 +764,7 @@ const clock = new THREE.Clock();
 function initThree() {
     container = document.getElementById('canvas-wrapper');
     DOM.container = container;
+    DOM.gameContainer = document.getElementById('game-container');
     DOM.levelDisplay = document.getElementById('level-display');
     DOM.levelLabel = document.getElementById('level-label');
     DOM.scoreText = document.getElementById('score-text');
@@ -879,7 +913,7 @@ function onWindowResize() {
 // KONTROLLER
 // ==========================================
 function setupControls() {
-    const el = document.getElementById('game-container');
+    const el = DOM.gameContainer || document.getElementById('game-container');
 
     const handlePointerDown = (e) => {
         if (Game.state !== GAME_STATE.PLAYING && Game.state !== GAME_STATE.BOSS_FIGHT) return;
@@ -1647,6 +1681,14 @@ function clearLevelEntities() {
         scene.remove(Game.boss.mesh);
         Game.boss = null;
     }
+
+    if (bannerTimer) {
+        clearTimeout(bannerTimer);
+        bannerTimer = null;
+    }
+    if (DOM.floatingBanner) {
+        DOM.floatingBanner.className = 'floating-banner';
+    }
 }
 
 // ==========================================
@@ -1826,30 +1868,13 @@ function refreshGateTextures(lang = Game.lang) {
 function buildGateMesh(w, h, info) {
     const group = new THREE.Group();
     group.userData.gateInfo = info;
-    const color = info.isPos ? 0x00f2fe : 0xef4444;
 
-    const frameGeo = new THREE.BoxGeometry(w, h, 0.3);
-    const frameMat = new THREE.MeshStandardMaterial({
-        color,
-        emissive: color,
-        emissiveIntensity: 0.6,
-        transparent: true,
-        opacity: 0.85
-    });
-
-    const fieldGeo = new THREE.PlaneGeometry(w - 0.2, h - 0.4);
-    const fieldMat = new THREE.MeshBasicMaterial({
-        color,
-        transparent: true,
-        opacity: 0.35,
-        side: THREE.DoubleSide
-    });
-    const field = new THREE.Mesh(fieldGeo, fieldMat);
+    const fieldMat = info.isPos ? GATE_POS_FIELD_MAT : GATE_NEG_FIELD_MAT;
+    const field = new THREE.Mesh(GATE_FIELD_GEO, fieldMat);
     field.position.z = 0.05;
     group.add(field);
 
-    const borderMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const topBar = new THREE.Mesh(new THREE.BoxGeometry(w, 0.2, 0.4), borderMat);
+    const topBar = new THREE.Mesh(GATE_TOPBAR_GEO, GATE_BORDER_MAT);
     topBar.position.y = h / 2;
     group.add(topBar);
 
@@ -1879,7 +1904,7 @@ function buildGateMesh(w, h, info) {
 
     const textTexture = new THREE.CanvasTexture(canvas);
     const textMat = new THREE.MeshBasicMaterial({ map: textTexture, transparent: true });
-    const textMesh = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.9, 1.4), textMat);
+    const textMesh = new THREE.Mesh(GATE_TEXT_GEO, textMat);
     textMesh.position.set(0, 0.2, 0.18);
     group.add(textMesh);
     group.userData.textMesh = textMesh;
@@ -3382,7 +3407,7 @@ function triggerVictory() {
         DOM.rewardScoreBtn.disabled = false;
         DOM.rewardScoreBtn.classList.remove('disabled');
         const L = LANG[Game.lang] || LANG.tr;
-        const txtEl = document.getElementById('txt-multiplier-btn');
+        const txtEl = DOM.txtMultiplierBtn || document.getElementById('txt-multiplier-btn');
         if (txtEl) txtEl.textContent = L.multiplierBtn || 'SKORU 3X KATLA (📺 İZLE)';
     }
 
@@ -3463,7 +3488,7 @@ function multiplyScore() {
         DOM.rewardScoreBtn.disabled = true;
         DOM.rewardScoreBtn.classList.add('disabled');
         const L = LANG[Game.lang] || LANG.tr;
-        const txtEl = document.getElementById('txt-multiplier-btn');
+        const txtEl = DOM.txtMultiplierBtn || document.getElementById('txt-multiplier-btn');
         if (txtEl) txtEl.textContent = L.multiplierUsed || '3X UYGULANDI! 🎉';
     }
 
@@ -3947,14 +3972,14 @@ function closePauseMenu() {
 }
 
 function startCountdown(onDone) {
-    // Var olan overlay'i temizle
+    const parent = DOM.gameContainer || document.getElementById('game-container');
     const existing = document.getElementById('countdown-overlay');
     if (existing) existing.remove();
 
     const overlay = document.createElement('div');
     overlay.id = 'countdown-overlay';
     overlay.innerHTML = '<span id="countdown-num">3</span>';
-    document.getElementById('game-container').appendChild(overlay);
+    if (parent) parent.appendChild(overlay);
 
     const nums = ['3', '2', '1'];
     let i = 0;

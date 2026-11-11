@@ -202,6 +202,8 @@ const AdManager = {
     platform: 'mock',
     lastInterstitialTime: 0,
     interstitialCooldown: 45, // saniye
+    _wasMutedBeforeAd: false,
+    _isGameplayActive: false,
 
     init: async function() {
         try {
@@ -215,6 +217,7 @@ const AdManager = {
                 console.log('[AdManager] Poki SDK Aktif');
             } else if (window.YaGames) {
                 this.platform = 'yandex';
+                window.ysdk = await window.YaGames.init();
                 console.log('[AdManager] Yandex Games SDK Aktif');
             } else {
                 this.platform = 'mock';
@@ -224,6 +227,72 @@ const AdManager = {
             console.warn('[AdManager] SDK Başlatma Hatası, Mock Fallback:', err);
             this.platform = 'mock';
         }
+        this.loadingFinished();
+    },
+
+    _muteForAd: function() {
+        this._wasMutedBeforeAd = sfx.isMuted;
+        sfx.isMuted = true;
+        if (sfx.ctx && sfx.ctx.state === 'running') {
+            sfx.ctx.suspend().catch(() => {});
+        }
+    },
+
+    _unmuteAfterAd: function() {
+        sfx.isMuted = this._wasMutedBeforeAd;
+        if (!sfx.isMuted && sfx.ctx && sfx.ctx.state === 'suspended') {
+            sfx.ctx.resume().catch(() => {});
+        }
+    },
+
+    loadingFinished: function() {
+        try {
+            if (this.platform === 'crazygames' && window.CrazyGames?.SDK?.game) {
+                window.CrazyGames.SDK.game.loadingStop();
+            } else if (this.platform === 'poki' && window.PokiSDK) {
+                window.PokiSDK.gameLoadingFinished();
+            } else if (this.platform === 'yandex' && window.ysdk?.features?.LoadingAPI) {
+                window.ysdk.features.LoadingAPI.ready();
+            }
+        } catch (e) {}
+    },
+
+    gameplayStart: function() {
+        if (this._isGameplayActive) return;
+        this._isGameplayActive = true;
+        try {
+            if (this.platform === 'crazygames' && window.CrazyGames?.SDK?.game) {
+                window.CrazyGames.SDK.game.gameplayStart();
+            } else if (this.platform === 'poki' && window.PokiSDK) {
+                window.PokiSDK.gameplayStart();
+            } else if (this.platform === 'yandex' && window.ysdk?.features?.GameplayAPI) {
+                window.ysdk.features.GameplayAPI.start();
+            }
+        } catch (e) {}
+    },
+
+    gameplayStop: function() {
+        if (!this._isGameplayActive) return;
+        this._isGameplayActive = false;
+        try {
+            if (this.platform === 'crazygames' && window.CrazyGames?.SDK?.game) {
+                window.CrazyGames.SDK.game.gameplayStop();
+            } else if (this.platform === 'poki' && window.PokiSDK) {
+                window.PokiSDK.gameplayStop();
+            } else if (this.platform === 'yandex' && window.ysdk?.features?.GameplayAPI) {
+                window.ysdk.features.GameplayAPI.stop();
+            }
+        } catch (e) {}
+    },
+
+    happyTime: function() {
+        try {
+            if (this.platform === 'crazygames' && window.CrazyGames?.SDK?.game) {
+                window.CrazyGames.SDK.game.happytime();
+            } else if (this.platform === 'poki' && window.PokiSDK?.happyTime) {
+                window.PokiSDK.happyTime(1.0);
+            }
+        } catch (e) {}
     },
 
     showInterstitial: function(onComplete) {
@@ -233,21 +302,29 @@ const AdManager = {
             return;
         }
         this.lastInterstitialTime = now;
+        this.gameplayStop();
+        this._muteForAd();
 
         const finish = () => {
+            this._unmuteAfterAd();
             if (onComplete) onComplete();
         };
 
         if (this.platform === 'crazygames' && window.CrazyGames?.SDK?.ad) {
             window.CrazyGames.SDK.ad.requestAd('midgame', {
+                adStarted: () => this._muteForAd(),
                 adFinished: finish,
                 adError: finish
             });
         } else if (this.platform === 'poki' && window.PokiSDK) {
-            window.PokiSDK.commercialBreak().then(finish).catch(finish);
+            window.PokiSDK.commercialBreak(() => this._muteForAd()).then(finish).catch(finish);
         } else if (this.platform === 'yandex' && window.ysdk) {
             window.ysdk.adv.showFullscreenAdv({
-                callbacks: { onClose: finish, onError: finish }
+                callbacks: {
+                    onOpen: () => this._muteForAd(),
+                    onClose: finish,
+                    onError: finish
+                }
             });
         } else {
             // Mock: Hızlı geçiş
@@ -256,29 +333,40 @@ const AdManager = {
     },
 
     showRewarded: function(rewardType, onSuccess, onFailure) {
+        this.gameplayStop();
+        this._muteForAd();
+
         const handleSuccess = () => {
+            this._unmuteAfterAd();
             if (onSuccess) onSuccess();
         };
         const handleFailure = () => {
+            this._unmuteAfterAd();
             if (onFailure) onFailure();
         };
 
         if (this.platform === 'crazygames' && window.CrazyGames?.SDK?.ad) {
             window.CrazyGames.SDK.ad.requestAd('rewarded', {
+                adStarted: () => this._muteForAd(),
                 adFinished: handleSuccess,
                 adError: handleFailure
             });
         } else if (this.platform === 'poki' && window.PokiSDK) {
-            window.PokiSDK.rewardedBreak().then(success => {
+            window.PokiSDK.rewardedBreak(() => this._muteForAd()).then(success => {
                 if (success) handleSuccess();
                 else handleFailure();
             }).catch(handleFailure);
         } else if (this.platform === 'yandex' && window.ysdk) {
+            let rewarded = false;
             window.ysdk.adv.showRewardedVideo({
                 callbacks: {
-                    onRewarded: handleSuccess,
+                    onOpen: () => this._muteForAd(),
+                    onRewarded: () => { rewarded = true; },
                     onError: handleFailure,
-                    onClose: () => {}
+                    onClose: () => {
+                        if (rewarded) handleSuccess();
+                        else handleFailure();
+                    }
                 }
             });
         } else {
@@ -824,19 +912,43 @@ function setupControls() {
     window.addEventListener('touchend', handlePointerUp, { passive: true });
     window.addEventListener('orientationchange', () => setTimeout(onWindowResize, 150));
 
+    // Portal QA: Sağ tık menüsünü kapat ve sekme değişiminde sesi/oyunu otomatik duraklat
+    window.addEventListener('contextmenu', (e) => e.preventDefault());
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            if (sfx.ctx && sfx.ctx.state === 'running') {
+                sfx.ctx.suspend().catch(() => {});
+            }
+            if (Game.state === GAME_STATE.PLAYING || Game.state === GAME_STATE.BOSS_FIGHT) {
+                openPauseMenu();
+            }
+        } else {
+            if (!sfx.isMuted && _sfxEnabled && sfx.ctx && sfx.ctx.state === 'suspended') {
+                sfx.ctx.resume().catch(() => {});
+            }
+        }
+    });
+
     window.addEventListener('keydown', (e) => {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+            e.preventDefault();
+        }
         if (e.key === 'ArrowLeft' || e.code === 'KeyA') {
             Game.keys.left = true;
-            e.preventDefault();
         } else if (e.key === 'ArrowRight' || e.code === 'KeyD') {
             Game.keys.right = true;
-            e.preventDefault();
         } else if (e.key === '1' || e.code === 'Digit1') {
             triggerSkill1();
         } else if (e.key === '2' || e.code === 'Digit2') {
             triggerSkill2();
         } else if (e.key === '3' || e.code === 'Digit3') {
             triggerSkill3();
+        } else if (e.key === 'Escape' || e.code === 'KeyP') {
+            if (Game.state === GAME_STATE.PLAYING || Game.state === GAME_STATE.BOSS_FIGHT) {
+                openPauseMenu();
+            } else if (Game.state === GAME_STATE.PAUSED) {
+                closePauseMenu();
+            }
         }
     });
 
@@ -3244,6 +3356,8 @@ function startBossDeath(boss) {
 
 function triggerVictory() {
     Game.state = GAME_STATE.VICTORY;
+    AdManager.gameplayStop();
+    AdManager.happyTime();
     sfx.playVictory();
 
     if (Game.boss && Game.boss.mesh) {
@@ -3281,6 +3395,7 @@ function triggerVictory() {
 
 function triggerGameOver() {
     Game.state = GAME_STATE.GAMEOVER;
+    AdManager.gameplayStop();
     sfx.playExplosion();
 
     createExplosion(Game.player.x, 1.0, Game.player.z, 0x00f2fe, 30);
@@ -3328,6 +3443,7 @@ function revivePlayer() {
     // Ekranı kapat ve oyunu sürdür
     DOM.gameoverScreen.classList.add('hidden');
     Game.state = (Game.boss && Game.boss.active) ? GAME_STATE.BOSS_FIGHT : GAME_STATE.PLAYING;
+    AdManager.gameplayStart();
 
     updateHeartsUI();
     updateSkillsUI();
@@ -3351,6 +3467,7 @@ function multiplyScore() {
         if (txtEl) txtEl.textContent = L.multiplierUsed || '3X UYGULANDI! 🎉';
     }
 
+    AdManager.happyTime();
     sfx.playVictory();
     showBanner(getBanners().multiplierSuccess);
 }
@@ -3358,11 +3475,13 @@ function multiplyScore() {
 function startGame() {
     DOM.startScreen.classList.add('hidden');
     Game.state = GAME_STATE.PLAYING;
+    AdManager.gameplayStart();
     updateHeartsUI();
 }
 
 function resetGame(lvl) {
     Game.state = GAME_STATE.PLAYING;
+    AdManager.gameplayStart();
     Game.score = 0;
 
     const p = Game.player;
@@ -3786,11 +3905,13 @@ function toggleBgm() {
 function openPauseMenu() {
     if (Game.state === GAME_STATE.MENU ||
         Game.state === GAME_STATE.VICTORY ||
-        Game.state === GAME_STATE.GAMEOVER) return;
+        Game.state === GAME_STATE.GAMEOVER ||
+        Game.state === GAME_STATE.PAUSED) return;
 
     Game._prevState = Game.state;
     Game.state = GAME_STATE.PAUSED;
     Game.isDragging = false;
+    AdManager.gameplayStop();
 
     // Stats doldur (DOM cache kullan)
     DOM.pauseScoreVal.textContent = Game.score.toLocaleString();
@@ -3810,6 +3931,7 @@ function closePauseMenuImmediate() {
     DOM.leaderboardModal.classList.add('hidden');
     if (Game.state === GAME_STATE.PAUSED) {
         Game.state = Game._prevState;
+        AdManager.gameplayStart();
     }
 }
 
@@ -3819,6 +3941,7 @@ function closePauseMenu() {
     startCountdown(() => {
         if (Game.state === GAME_STATE.PAUSED) {
             Game.state = Game._prevState;
+            AdManager.gameplayStart();
         }
     });
 }

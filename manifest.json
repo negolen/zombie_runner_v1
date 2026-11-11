@@ -1,0 +1,18 @@
+{
+  "name": "Zombie Runner 3D - Multiplier Shooter",
+  "short_name": "Zombie Runner 3D",
+  "description": "Fast-paced 3D WebGL multiplier runner and zombie shooter game.",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#0b0914",
+  "theme_color": "#0b0914",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -394,6 +394,7 @@ const Game = {
 };
 
 // DOM Referans Önbelleği (Layout thrashing & tekrarlı sorgu önleme)
+// i18n için sık kullanılan elementler de önbelleğe alınıyor
 const DOM = {
     container: null,
     levelDisplay: null,
@@ -425,7 +426,61 @@ const DOM = {
     adOverlay: null,
     adOverlayTitle: null,
     adOverlayDesc: null,
-    adCountdownVal: null
+    adCountdownVal: null,
+    // i18n cached elements
+    pauseModal: null,
+    leaderboardModal: null,
+    sfxBtn: null,
+    sfxStatusText: null,
+    bgmBtn: null,
+    bgmStatusText: null,
+    pauseScoreVal: null,
+    pauseHighVal: null,
+    pauseLvlVal: null,
+    // setLang cached
+    langTrBtn: null,
+    langEnBtn: null,
+    langStartTrBtn: null,
+    langStartEnBtn: null,
+    txtStartSubtitle: null,
+    txtStartBtn: null,
+    txtBossMarker: null,
+    txtLandscapeWarn: null,
+    statNameFirerate: null,
+    statNamePower: null,
+    statNameBullets: null,
+    skill1Label: null,
+    skill1Sub: null,
+    skill2Label: null,
+    skill2Sub: null,
+    skill3Label: null,
+    skill3Sub: null,
+    txtPauseTitle: null,
+    txtStatScore: null,
+    txtStatHigh: null,
+    txtStatLvl: null,
+    txtResumeBtn: null,
+    txtLeaderboardBtn: null,
+    txtRestartBtn: null,
+    txtLeadTitle: null,
+    txtLeadClose: null,
+    txtVictoryTitle: null,
+    txtVictoryDesc: null,
+    txtVictoryScoreLabel: null,
+    txtNextBtn: null,
+    adBadgeRevive: null,
+    adBadgeScore: null,
+    txtReviveBtn: null,
+    txtMultiplierBtn: null,
+    txtGameoverTitle: null,
+    txtGameoverDesc: null,
+    txtGameoverScoreLabel: null,
+    txtRestartGameoverBtn: null,
+    leaderboardList: null,
+    instItem1: null,
+    instItem2: null,
+    instItem3: null,
+    instItem4: null,
 };
 
 // ==========================================
@@ -618,6 +673,59 @@ function initThree() {
     DOM.adOverlayTitle = document.getElementById('ad-overlay-title');
     DOM.adOverlayDesc = document.getElementById('ad-overlay-desc');
     DOM.adCountdownVal = document.getElementById('ad-countdown-val');
+    // i18n DOM önbelleği — setLang her çağrıldığında getElementById yapılmaz
+    DOM.pauseModal = document.getElementById('pause-modal');
+    DOM.leaderboardModal = document.getElementById('leaderboard-modal');
+    DOM.sfxBtn = document.getElementById('toggle-sfx-btn');
+    DOM.sfxStatusText = document.getElementById('sfx-status-text');
+    DOM.bgmBtn = document.getElementById('toggle-bgm-btn');
+    DOM.bgmStatusText = document.getElementById('bgm-status-text');
+    DOM.pauseScoreVal = document.getElementById('pause-score-val');
+    DOM.pauseHighVal = document.getElementById('pause-high-val');
+    DOM.pauseLvlVal = document.getElementById('pause-lvl-val');
+    DOM.langTrBtn = document.getElementById('lang-tr-btn');
+    DOM.langEnBtn = document.getElementById('lang-en-btn');
+    DOM.langStartTrBtn = document.getElementById('lang-start-tr-btn');
+    DOM.langStartEnBtn = document.getElementById('lang-start-en-btn');
+    DOM.txtStartSubtitle = document.getElementById('txt-start-subtitle');
+    DOM.txtStartBtn = document.getElementById('txt-start-btn');
+    DOM.txtBossMarker = document.getElementById('txt-boss-marker');
+    DOM.txtLandscapeWarn = document.getElementById('txt-landscape-warn');
+    DOM.statNameFirerate = document.getElementById('stat-name-firerate');
+    DOM.statNamePower = document.getElementById('stat-name-power');
+    DOM.statNameBullets = document.getElementById('stat-name-bullets');
+    DOM.skill1Label = document.getElementById('skill-1-label');
+    DOM.skill1Sub = document.getElementById('skill-1-sub');
+    DOM.skill2Label = document.getElementById('skill-2-label');
+    DOM.skill2Sub = document.getElementById('skill-2-sub');
+    DOM.skill3Label = document.getElementById('skill-3-label');
+    DOM.skill3Sub = document.getElementById('skill-3-sub');
+    DOM.txtPauseTitle = document.getElementById('txt-pause-title');
+    DOM.txtStatScore = document.getElementById('txt-stat-score');
+    DOM.txtStatHigh = document.getElementById('txt-stat-high');
+    DOM.txtStatLvl = document.getElementById('txt-stat-lvl');
+    DOM.txtResumeBtn = document.getElementById('txt-resume-btn');
+    DOM.txtLeaderboardBtn = document.getElementById('txt-leaderboard-btn');
+    DOM.txtRestartBtn = document.getElementById('txt-restart-btn');
+    DOM.txtLeadTitle = document.getElementById('txt-lead-title');
+    DOM.txtLeadClose = document.getElementById('txt-lead-close');
+    DOM.txtVictoryTitle = document.getElementById('txt-victory-title');
+    DOM.txtVictoryDesc = document.getElementById('txt-victory-desc');
+    DOM.txtVictoryScoreLabel = document.getElementById('txt-victory-score-label');
+    DOM.txtNextBtn = document.getElementById('txt-next-btn');
+    DOM.adBadgeRevive = document.getElementById('ad-badge-revive');
+    DOM.adBadgeScore = document.getElementById('ad-badge-score');
+    DOM.txtReviveBtn = document.getElementById('txt-revive-btn');
+    DOM.txtMultiplierBtn = document.getElementById('txt-multiplier-btn');
+    DOM.txtGameoverTitle = document.getElementById('txt-gameover-title');
+    DOM.txtGameoverDesc = document.getElementById('txt-gameover-desc');
+    DOM.txtGameoverScoreLabel = document.getElementById('txt-gameover-score-label');
+    DOM.txtRestartGameoverBtn = document.getElementById('txt-restart-gameover-btn');
+    DOM.leaderboardList = document.getElementById('leaderboard-list');
+    DOM.instItem1 = document.getElementById('inst-item-1');
+    DOM.instItem2 = document.getElementById('inst-item-2');
+    DOM.instItem3 = document.getElementById('inst-item-3');
+    DOM.instItem4 = document.getElementById('inst-item-4');
 
     // Reklam SDK Başlatıcı
     AdManager.init();
@@ -1494,16 +1602,13 @@ function explodeBarrel(barrel, index) {
     createExplosion(bx, 0.8, bz, 0xff5500, 25);
     createFloatingText('💥 BOOM! +150', bx, 1.5, bz, '#f97316');
 
-    for (let j = Game.enemies.length - 1; j >= 0; j--) {
-        const e = Game.enemies[j];
+    const snapshot = Game.enemies.slice();
+    for (let j = 0; j < snapshot.length; j++) {
+        const e = snapshot[j];
+        if (!e || e.isDead) continue;
         const distSq = (bx - e.mesh.position.x)**2 + (bz - e.mesh.position.z)**2;
         if (distSq <= 14.44) { // 3.8 * 3.8 = 14.44
-            createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, e.originalColor);
-            disposeHierarchy(e.mesh);
-            scene.remove(e.mesh);
-            if (e.hpBarMesh) scene.remove(e.hpBarMesh);
-            Game.enemies.splice(j, 1);
-            Game.score += 50;
+            killEnemy(e, true, false);
         }
     }
 
@@ -1515,7 +1620,8 @@ function explodeBarrel(barrel, index) {
     Game.score += 150;
     DOM.scoreText.textContent = Game.score;
     scene.remove(barrel.mesh);
-    Game.barrels.splice(index, 1);
+    const bIdx = Game.barrels.indexOf(barrel);
+    if (bIdx !== -1) Game.barrels.splice(bIdx, 1);
 }
 
 // Uçuşan Hasar ve Puan Yazıları
@@ -1685,8 +1791,8 @@ function createZombie(x, z, type, hpMult) {
     } else if (type === 'boomer') {
         hp = 45; speed = 2.4; color = 0x10b981; scale = 1.15;
     } else if (type === 'shield') {
-        hp = 70; speed = 1.6; color = 0x475569; scale = 1.15;
-        shieldHp = Math.round(50 * hpMult);
+        hp = 55; speed = 1.6; color = 0x475569; scale = 1.15;
+        shieldHp = Math.round(30 * hpMult);
     } else if (type === 'capacitor') {
         hp = 35; speed = 2.0; color = 0x0284c7; scale = 1.05;
     }
@@ -1777,10 +1883,12 @@ function createZombie(x, z, type, hpMult) {
         bodyMat,
         originalColor: color,
         scale,
-        radius: 0.6 * scale,
+        radius: 0.65 * scale,
         animTime: Math.random() * 10,
         shieldMesh,
-        shieldHp
+        shieldHp,
+        maxShieldHp: shieldHp,
+        isDead: false
     });
 }
 
@@ -2182,7 +2290,8 @@ function updateSkillsUI() {
         btn3.querySelector('.skill-sub').textContent = `${Math.ceil(p.skill3Cooldown)}s`;
     } else {
         btn3.classList.remove('disabled');
-        btn3.querySelector('.skill-sub').textContent = '-%50 HASAR';
+        const L = LANG[Game.lang] || LANG.tr;
+        btn3.querySelector('.skill-sub').textContent = L.skills ? L.skills.s3.sub : '-%50 HASAR';
     }
 }
 
@@ -2220,14 +2329,22 @@ function shootBullets() {
     }
 }
 
+const MAX_PARTICLES = 140;
 function createExplosion(x, y, z, color = 0x22c55e, count = 12) {
     const pMat = getParticleMaterial(color);
 
     for (let i = 0; i < count; i++) {
-        const p = new THREE.Mesh(PARTICLE_GEO, pMat);
-        p.userData.shared = true;
+        let p;
+        if (Game.particles.length >= MAX_PARTICLES) {
+            const oldest = Game.particles.shift();
+            p = oldest.mesh;
+            p.material = pMat;
+        } else {
+            p = new THREE.Mesh(PARTICLE_GEO, pMat);
+            p.userData.shared = true;
+            scene.add(p);
+        }
         p.position.set(x, y, z);
-        scene.add(p);
 
         Game.particles.push({
             mesh: p,
@@ -2329,40 +2446,161 @@ function spawnClones() {
     });
 }
 
-function triggerChainLightning(sourceEnemy) {
+function updateEnemyHealthBar(e) {
+    if (!e || !e.hpBarMesh) return;
+    const totalMax = e.maxHp + (e.maxShieldHp || 0);
+    const totalCur = Math.max(0, e.hp) + Math.max(0, e.shieldHp || 0);
+    const pct = totalMax > 0 ? Math.max(0, Math.min(1, totalCur / totalMax)) : 0;
+    e.hpBarMesh.fillMesh.scale.x = pct * e.hpBarMesh.maxWidth;
+    e.hpBarMesh.fillMesh.position.x = -e.hpBarMesh.maxWidth * (1 - pct) / 2;
+}
+
+function damageEnemy(e, dmg, bypassShield = false, hitX = null, hitZ = null) {
+    if (!e || e.isDead || e.hp <= 0) return;
+
+    const ex = e.mesh.position.x;
+    const ez = e.mesh.position.z;
+
+    if (e.type === 'shield' && !bypassShield && e.shieldHp > 0) {
+        e.shieldHp -= dmg;
+        createExplosion(hitX !== null ? hitX : ex, 1.0 * e.scale, hitZ !== null ? hitZ : ez, 0x38bdf8, 8);
+        sfx.playHit();
+
+        if (e.shieldHp <= 0) {
+            const overflow = -e.shieldHp;
+            e.shieldHp = 0;
+            if (e.shieldMesh) {
+                e.mesh.remove(e.shieldMesh);
+                e.shieldMesh = null;
+            }
+            createFloatingText(Game.lang === 'en' ? '💥 SHIELD BROKEN!' : '💥 KALKAN KIRILDI!', ex, 2.4 * e.scale, ez, '#facc15');
+            if (overflow > 0) {
+                e.hp -= overflow;
+            }
+        } else {
+            createFloatingText(Game.lang === 'en' ? '🛡️ BLOCK!' : '🛡️ BLOK!', ex, 2.0 * e.scale, ez, '#38bdf8');
+        }
+    } else {
+        sfx.playHit();
+        e.hp -= dmg;
+    }
+
+    if (e.bodyMat) {
+        e.bodyMat.color.setHex(0xffffff);
+        setTimeout(() => {
+            if (e && !e.isDead && e.bodyMat) e.bodyMat.color.setHex(e.originalColor);
+        }, 40);
+    }
+
+    updateEnemyHealthBar(e);
+
+    if (e.hp <= 0) {
+        killEnemy(e, true, true);
+    }
+}
+
+function killEnemy(e, giveScore = true, allowDrop = true) {
+    if (!e || e.isDead) return;
+    e.isDead = true;
+    e.hp = 0;
+
+    const ex = e.mesh.position.x;
+    const ez = e.mesh.position.z;
+
+    // Önce referans ile diziden çıkar (index kayması veya başka zombiyi silme hatasını %100 önler)
+    const idx = Game.enemies.indexOf(e);
+    if (idx !== -1) {
+        Game.enemies.splice(idx, 1);
+    }
+
+    // 3D sahneden ve bellekten anında temizle
+    disposeHierarchy(e.mesh);
+    scene.remove(e.mesh);
+    if (e.hpBarMesh) {
+        scene.remove(e.hpBarMesh);
+        e.hpBarMesh = null;
+    }
+
+    createExplosion(ex, 1.0, ez, e.originalColor || 0x22c55e);
+
+    if (giveScore) {
+        Game.score += 50;
+        if (DOM.scoreText) DOM.scoreText.textContent = Game.score;
+    }
+
+    if (allowDrop && Math.random() < 0.38) {
+        spawnDrop(ex, ez);
+    }
+
+    if (e.type === 'capacitor') {
+        sfx.playExplosion();
+        createExplosion(ex, 1.2, ez, 0x38bdf8, 22);
+        createFloatingText(Game.lang === 'en' ? '⚡ CAPACITOR BLAST!' : '⚡ KAPASİTÖR PATLAMASI!', ex, 2.4, ez, '#38bdf8');
+        if (giveScore) {
+            Game.score += 50;
+            if (DOM.scoreText) DOM.scoreText.textContent = Game.score;
+        }
+        triggerChainLightning(ex, ez, e);
+    } else if (e.type === 'boomer') {
+        sfx.playExplosion();
+        createExplosion(ex, 1.2, ez, 0x10b981, 28);
+        createFloatingText('☣️ TOXIC BLAST! +100', ex, 2.2, ez, '#10b981');
+        if (giveScore) {
+            Game.score += 50;
+            if (DOM.scoreText) DOM.scoreText.textContent = Game.score;
+        }
+
+        const snapshot = Game.enemies.slice();
+        for (let k = 0; k < snapshot.length; k++) {
+            const other = snapshot[k];
+            if (!other || other.isDead || other === e) continue;
+            const dBoomerSq = (other.mesh.position.x - ex) ** 2 + (other.mesh.position.z - ez) ** 2;
+            if (dBoomerSq <= 12.96) { // 3.6m yarıçap
+                createExplosion(other.mesh.position.x, 0.8, other.mesh.position.z, 0x22c55e, 10);
+                damageEnemy(other, 80, true);
+            }
+        }
+    } else if (giveScore) {
+        createFloatingText('+50', ex, 1.8, ez, '#22c55e');
+    }
+}
+
+function triggerChainLightning(sx, sz, sourceEnemy) {
     const maxChain = 4;
     const chainRadius = 5.0;
-    const sPos = sourceEnemy.mesh.position;
 
     // Sonraki kapının Z pozisyonunu bul (kapı arkasındakileri vurmasın)
     let nextGateZ = -99999;
     for (let i = 0; i < Game.gatePairs.length; i++) {
         const g = Game.gatePairs[i];
-        if (g.z < sPos.z) {
+        if (g.z < sz) {
             nextGateZ = g.z;
             break;
         }
     }
 
     const candidates = Game.enemies
-        .filter(e => e !== sourceEnemy && e.hp > 0 && e.mesh.position.z >= nextGateZ - 2)
+        .filter(e => e && !e.isDead && e !== sourceEnemy && e.hp > 0 && e.mesh.position.z >= nextGateZ - 2)
         .map(e => ({
             e,
-            distSq: (e.mesh.position.x - sPos.x)**2 + (e.mesh.position.z - sPos.z)**2
+            distSq: (e.mesh.position.x - sx) ** 2 + (e.mesh.position.z - sz) ** 2
         }))
         .filter(c => c.distSq <= chainRadius * chainRadius)
         .sort((a, b) => a.distSq - b.distSq);
 
     const hitTargets = candidates.slice(0, maxChain);
     hitTargets.forEach(({ e }) => {
-        e.hp -= 35;
-        createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, 0x38bdf8, 8);
-        createFloatingText('⚡ CHAIN! -35', e.mesh.position.x, 2.2, e.mesh.position.z, '#38bdf8');
+        if (!e || e.isDead) return;
+        const tx = e.mesh.position.x;
+        const tz = e.mesh.position.z;
+
+        createExplosion(tx, 1.0, tz, 0x38bdf8, 8);
+        createFloatingText('⚡ CHAIN! -35', tx, 2.2, tz, '#38bdf8');
 
         // Şimşek arkı çizgisi
         const points = [
-            new THREE.Vector3(sPos.x, 1.2, sPos.z),
-            new THREE.Vector3(e.mesh.position.x, 1.2, e.mesh.position.z)
+            new THREE.Vector3(sx, 1.2, sz),
+            new THREE.Vector3(tx, 1.2, tz)
         ];
         const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
         const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
@@ -2374,23 +2612,7 @@ function triggerChainLightning(sourceEnemy) {
             lineMat.dispose();
         }, 220);
 
-        if (e.hpBarMesh) {
-            const oPct = Math.max(0, e.hp / e.maxHp);
-            e.hpBarMesh.fillMesh.scale.x = oPct * e.hpBarMesh.maxWidth;
-            e.hpBarMesh.fillMesh.position.x = -e.hpBarMesh.maxWidth * (1 - oPct) / 2;
-        }
-
-        if (e.hp <= 0) {
-            const idx = Game.enemies.indexOf(e);
-            if (idx !== -1) {
-                createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, e.originalColor || 0x22c55e);
-                disposeHierarchy(e.mesh);
-                scene.remove(e.mesh);
-                if (e.hpBarMesh) scene.remove(e.hpBarMesh);
-                Game.enemies.splice(idx, 1);
-                Game.score += 50;
-            }
-        }
+        damageEnemy(e, 35, true);
     });
 }
 
@@ -2516,9 +2738,10 @@ function update(delta) {
         }
     }
 
-    // Mermiler ve Çarpışmalar (Swept Z + Noktasal Çift Güvenceli Algılama)
+    // Mermiler ve Çarpışmalar (2D Sürekli Segment-Çember Çarpışması + En Öndeki Zombi Önceliği)
     for (let i = Game.bullets.length - 1; i >= 0; i--) {
         const b = Game.bullets[i];
+        const prevX = b.x;
         const prevZ = b.z;
         b.z -= b.speed * delta;
         b.x += b.vx * delta;
@@ -2543,108 +2766,52 @@ function update(delta) {
 
         if (bulletRemoved) continue;
 
-        // Zombiler
-        for (let j = Game.enemies.length - 1; j >= 0; j--) {
+        // Zombiler: Merminin bu karedeki (prevX, prevZ) -> (b.x, b.z) doğru parçası üzerindeki en öndeki zombiyi bul
+        let bestEnemy = null;
+        let bestEnemyZ = -Infinity;
+        const segDx = b.x - prevX;
+        const segDz = b.z - prevZ;
+        const segLenSq = segDx * segDx + segDz * segDz;
+
+        for (let j = 0; j < Game.enemies.length; j++) {
             const e = Game.enemies[j];
-            const dx = b.x - e.mesh.position.x;
-            const dz = b.z - e.mesh.position.z;
-            const hitR = e.radius + 0.45;
-            const isPointHit = (dx * dx + dz * dz) < (hitR * hitR);
-            const isSweptHit = (Math.abs(dx) <= hitR) && (e.mesh.position.z <= prevZ + 0.3) && (e.mesh.position.z >= b.z - 0.3);
+            if (!e || e.isDead || e.hp <= 0) continue;
 
-            if (isPointHit || isSweptHit) {
-                if (e.type === 'shield' && Math.abs(dx) < 0.36 && e.shieldHp > 0) {
-                    e.shieldHp -= b.damage;
-                    createExplosion(b.x, 1.0 * e.scale, b.z, 0x38bdf8, 8);
-                    createFloatingText('🛡️ BLOK!', e.mesh.position.x, 2.0 * e.scale, e.mesh.position.z, '#38bdf8');
-                    sfx.playHit();
-                    if (e.shieldHp <= 0) {
-                        if (e.shieldMesh) e.mesh.remove(e.shieldMesh);
-                        createFloatingText('💥 KALKAN KIRILDI!', e.mesh.position.x, 2.4 * e.scale, e.mesh.position.z, '#facc15');
-                    }
-                    scene.remove(b.mesh);
-                    Game.bullets.splice(i, 1);
-                    bulletRemoved = true;
-                    break;
+            const ex = e.mesh.position.x;
+            const ez = e.mesh.position.z;
+            const hitR = e.radius + 0.52;
+
+            // Hızlı Z ekseni elemesi
+            if (ez > prevZ + hitR + 0.4 || ez < b.z - hitR - 0.4) continue;
+
+            // Doğru parçası (segment) ile zombi merkezi arasındaki en yakın nokta
+            let t = 0;
+            if (segLenSq > 0.00001) {
+                t = ((ex - prevX) * segDx + (ez - prevZ) * segDz) / segLenSq;
+                if (t < 0) t = 0;
+                else if (t > 1) t = 1;
+            }
+            const closestX = prevX + t * segDx;
+            const closestZ = prevZ + t * segDz;
+            const distX = ex - closestX;
+            const distZ = ez - closestZ;
+
+            if (distX * distX + distZ * distZ <= hitR * hitR) {
+                // Oyuncuya en yakın (Z değeri en büyük) zombiyi seç
+                if (ez > bestEnemyZ) {
+                    bestEnemyZ = ez;
+                    bestEnemy = e;
                 }
-
-                sfx.playHit();
-                e.hp -= b.damage;
-
-                e.bodyMat.color.setHex(0xffffff);
-                setTimeout(() => {
-                    if (e && e.bodyMat) e.bodyMat.color.setHex(e.originalColor);
-                }, 40);
-
-                if (e.hpBarMesh) {
-                    const pct = Math.max(0, e.hp / e.maxHp);
-                    e.hpBarMesh.fillMesh.scale.x = pct * e.hpBarMesh.maxWidth;
-                    e.hpBarMesh.fillMesh.position.x = -e.hpBarMesh.maxWidth * (1 - pct) / 2;
-                }
-
-                if (e.hp <= 0) {
-                    createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, e.originalColor);
-
-                    if (e.type === 'capacitor') {
-                        sfx.playExplosion();
-                        createExplosion(e.mesh.position.x, 1.2, e.mesh.position.z, 0x38bdf8, 22);
-                        createFloatingText('⚡ KAPASİTÖR PATLAMASI!', e.mesh.position.x, 2.4, e.mesh.position.z, '#38bdf8');
-                        triggerChainLightning(e);
-                        Game.score += 50;
-                    } else if (e.type === 'boomer') {
-                        sfx.playExplosion();
-                        createExplosion(e.mesh.position.x, 1.2, e.mesh.position.z, 0x10b981, 28);
-                        createFloatingText('☣️ TOXIC BLAST! +100', e.mesh.position.x, 2.2, e.mesh.position.z, '#10b981');
-                        Game.score += 50;
-
-                        for (let k = Game.enemies.length - 1; k >= 0; k--) {
-                            const other = Game.enemies[k];
-                            if (other === e) continue;
-                            const dBoomerSq = (other.mesh.position.x - e.mesh.position.x)**2 + (other.mesh.position.z - e.mesh.position.z)**2;
-                            if (dBoomerSq <= 12.96) { // 3.6 * 3.6 = 12.96
-                                other.hp -= 80;
-                                createExplosion(other.mesh.position.x, 0.8, other.mesh.position.z, 0x22c55e, 10);
-                                if (other.hpBarMesh) {
-                                    const oPct = Math.max(0, other.hp / other.maxHp);
-                                    other.hpBarMesh.fillMesh.scale.x = oPct * other.hpBarMesh.maxWidth;
-                                    other.hpBarMesh.fillMesh.position.x = -other.hpBarMesh.maxWidth * (1 - oPct) / 2;
-                                }
-                                if (other.hp <= 0) {
-                                    disposeHierarchy(other.mesh);
-                                    scene.remove(other.mesh);
-                                    if (other.hpBarMesh) scene.remove(other.hpBarMesh);
-                                    Game.enemies.splice(k, 1);
-                                    // k < j olduğunda j'yi kaydır
-                                    if (k < j) j--;
-                                    Game.score += 50;
-                                }
-                            }
-                        }
-                    } else {
-                        createFloatingText('+50', e.mesh.position.x, 1.8, e.mesh.position.z, '#22c55e');
-                    }
-
-                    disposeHierarchy(e.mesh);
-                    scene.remove(e.mesh);
-                    if (e.hpBarMesh) scene.remove(e.hpBarMesh);
-
-                    if (Math.random() < 0.38) {
-                        spawnDrop(e.mesh.position.x, e.mesh.position.z);
-                    }
-
-                    Game.enemies.splice(j, 1);
-                    Game.score += 50;
-                    DOM.scoreText.textContent = Game.score;
-                }
-
-                scene.remove(b.mesh);
-                Game.bullets.splice(i, 1);
-                bulletRemoved = true;
-                break;
             }
         }
 
-        if (bulletRemoved) continue;
+        if (bestEnemy) {
+            damageEnemy(bestEnemy, b.damage, false, b.x, b.z);
+            scene.remove(b.mesh);
+            Game.bullets.splice(i, 1);
+            bulletRemoved = true;
+            continue;
+        }
 
         // Boss
         if (Game.boss && Game.boss.active) {
@@ -2694,6 +2861,16 @@ function update(delta) {
     // Zombileri Güncelle
     for (let i = Game.enemies.length - 1; i >= 0; i--) {
         const e = Game.enemies[i];
+        if (!e || e.isDead || e.hp <= 0) {
+            if (e) {
+                disposeHierarchy(e.mesh);
+                scene.remove(e.mesh);
+                if (e.hpBarMesh) scene.remove(e.hpBarMesh);
+            }
+            Game.enemies.splice(i, 1);
+            continue;
+        }
+
         e.mesh.position.z += e.speed * delta;
         e.animTime += delta * 6;
         e.mesh.rotation.y = Math.sin(e.animTime) * 0.2;
@@ -2705,18 +2882,15 @@ function update(delta) {
 
         const zdistSq = (p.x - e.mesh.position.x)**2 + (p.z - e.mesh.position.z)**2;
         if (zdistSq < 0.81) { // 0.9 * 0.9 = 0.81
+            killEnemy(e, false, false);
             if (p.invulnerableTimer <= 0) {
-                createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, e.originalColor);
-                disposeHierarchy(e.mesh);
-                scene.remove(e.mesh);
-                if (e.hpBarMesh) scene.remove(e.hpBarMesh);
-                Game.enemies.splice(i, 1);
                 takePlayerDamage(1.0);
             }
             continue;
         }
 
         if (e.mesh.position.z > p.z + 10) {
+            e.isDead = true;
             disposeHierarchy(e.mesh);
             scene.remove(e.mesh);
             if (e.hpBarMesh) scene.remove(e.hpBarMesh);
@@ -3139,8 +3313,10 @@ function revivePlayer() {
     // Yakındaki tehlikeleri temizle (Safe-Zone Revive Blast)
     for (let i = Game.enemies.length - 1; i >= 0; i--) {
         const e = Game.enemies[i];
+        if (!e || e.isDead) continue;
         const distSq = (p.x - e.mesh.position.x)**2 + (p.z - e.mesh.position.z)**2;
         if (distSq < 36) { // 6 metre çapındaki zombileri havaya uçur
+            e.isDead = true;
             createExplosion(e.mesh.position.x, 1.0, e.mesh.position.z, 0x10b981, 15);
             disposeHierarchy(e.mesh);
             scene.remove(e.mesh);
@@ -3446,142 +3622,88 @@ function detectInitialLang() {
 function setLang(lang) {
     Game.lang = lang;
     const L = LANG[lang] || LANG.tr;
+    const isReady = !!DOM.langTrBtn; // DOM önbelleği doldu mu?
 
-    // Menü Butonları
-    const trBtn = document.getElementById('lang-tr-btn');
-    const enBtn = document.getElementById('lang-en-btn');
-    if (trBtn) trBtn.classList.toggle('active', lang === 'tr');
-    if (enBtn) enBtn.classList.toggle('active', lang === 'en');
-
-    // Başlangıç Ekranı Butonları
-    const startTrBtn = document.getElementById('lang-start-tr-btn');
-    const startEnBtn = document.getElementById('lang-start-en-btn');
-    if (startTrBtn) startTrBtn.classList.toggle('active', lang === 'tr');
-    if (startEnBtn) startEnBtn.classList.toggle('active', lang === 'en');
+    // Dil Butonları
+    if (DOM.langTrBtn) DOM.langTrBtn.classList.toggle('active', lang === 'tr');
+    if (DOM.langEnBtn) DOM.langEnBtn.classList.toggle('active', lang === 'en');
+    if (DOM.langStartTrBtn) DOM.langStartTrBtn.classList.toggle('active', lang === 'tr');
+    if (DOM.langStartEnBtn) DOM.langStartEnBtn.classList.toggle('active', lang === 'en');
 
     // Başlangıç Ekranı Metinleri
-    const subTitleEl = document.getElementById('txt-start-subtitle');
-    if (subTitleEl) subTitleEl.textContent = L.startSubtitle;
-    const startBtnEl = document.getElementById('txt-start-btn');
-    if (startBtnEl) startBtnEl.textContent = L.startBtn;
-
+    if (DOM.txtStartSubtitle) DOM.txtStartSubtitle.textContent = L.startSubtitle;
+    if (DOM.txtStartBtn) DOM.txtStartBtn.textContent = L.startBtn;
     if (L.instructions && L.instructions.length >= 4) {
-        for (let i = 1; i <= 4; i++) {
-            const instEl = document.getElementById(`inst-item-${i}`);
-            if (instEl) instEl.innerHTML = L.instructions[i - 1];
-        }
+        if (DOM.instItem1) DOM.instItem1.innerHTML = L.instructions[0];
+        if (DOM.instItem2) DOM.instItem2.innerHTML = L.instructions[1];
+        if (DOM.instItem3) DOM.instItem3.innerHTML = L.instructions[2];
+        if (DOM.instItem4) DOM.instItem4.innerHTML = L.instructions[3];
     }
 
     // Yatay Mod Uyarısı
-    const lwEl = document.getElementById('txt-landscape-warn');
-    if (lwEl) lwEl.innerHTML = L.landscapeWarn;
+    if (DOM.txtLandscapeWarn) DOM.txtLandscapeWarn.innerHTML = L.landscapeWarn;
 
     // HUD Metinleri
     if (DOM.levelLabel) DOM.levelLabel.textContent = L.lvlLabel(Game.level);
-    const bossMarkerEl = document.getElementById('txt-boss-marker');
-    if (bossMarkerEl) bossMarkerEl.textContent = L.bossMarker;
+    if (DOM.txtBossMarker) DOM.txtBossMarker.textContent = L.bossMarker;
+    if (DOM.statNameFirerate) DOM.statNameFirerate.textContent = L.statFirerate;
+    if (DOM.statNamePower) DOM.statNamePower.textContent = L.statPower;
+    if (DOM.statNameBullets) DOM.statNameBullets.textContent = L.statBullets;
 
-    const muteBtnEl = document.getElementById('mute-btn');
-    if (muteBtnEl) muteBtnEl.setAttribute('title', L.muteTitle);
-    const pauseBtnEl = document.getElementById('pause-btn');
-    if (pauseBtnEl) pauseBtnEl.setAttribute('title', L.pauseTitleBtn);
-
-    const statFrEl = document.getElementById('stat-name-firerate');
-    if (statFrEl) statFrEl.textContent = L.statFirerate;
-    const statPwrEl = document.getElementById('stat-name-power');
-    if (statPwrEl) statPwrEl.textContent = L.statPower;
-    const statBulEl = document.getElementById('stat-name-bullets');
-    if (statBulEl) statBulEl.textContent = L.statBullets;
-
-    // Boss İsmi (Eğer boss sahnede aktifse)
+    // Boss İsmi (Boss sahnede aktifse)
     if (Game.boss && Game.boss.theme && DOM.bossNameText) {
         DOM.bossNameText.textContent = `🧟‍♂️ ${Game.boss.theme.name}`;
     }
 
-    // Boss Skills
+    // Boss Yetenekleri
     if (L.skills) {
-        const s1Btn = document.getElementById('skill-1-btn');
-        if (s1Btn) s1Btn.setAttribute('title', L.skills.s1.title);
-        const s1Lbl = document.getElementById('skill-1-label');
-        if (s1Lbl) s1Lbl.textContent = L.skills.s1.label;
-        const s1Sub = document.getElementById('skill-1-sub');
-        if (s1Sub) s1Sub.textContent = L.skills.s1.sub;
-
-        const s2Btn = document.getElementById('skill-2-btn');
-        if (s2Btn) s2Btn.setAttribute('title', L.skills.s2.title);
-        const s2Lbl = document.getElementById('skill-2-label');
-        if (s2Lbl) s2Lbl.textContent = L.skills.s2.label;
-        const s2Sub = document.getElementById('skill-2-sub');
-        if (s2Sub) s2Sub.textContent = L.skills.s2.sub;
-
-        const s3Btn = document.getElementById('skill-3-btn');
-        if (s3Btn) s3Btn.setAttribute('title', L.skills.s3.title);
-        const s3Lbl = document.getElementById('skill-3-label');
-        if (s3Lbl) s3Lbl.textContent = L.skills.s3.label;
-        const s3Sub = document.getElementById('skill-3-sub');
-        if (s3Sub) s3Sub.textContent = L.skills.s3.sub;
+        if (DOM.skill1Btn) DOM.skill1Btn.setAttribute('title', L.skills.s1.title);
+        if (DOM.skill1Label) DOM.skill1Label.textContent = L.skills.s1.label;
+        if (DOM.skill1Sub) DOM.skill1Sub.textContent = L.skills.s1.sub;
+        if (DOM.skill2Btn) DOM.skill2Btn.setAttribute('title', L.skills.s2.title);
+        if (DOM.skill2Label) DOM.skill2Label.textContent = L.skills.s2.label;
+        if (DOM.skill2Sub) DOM.skill2Sub.textContent = L.skills.s2.sub;
+        if (DOM.skill3Btn) DOM.skill3Btn.setAttribute('title', L.skills.s3.title);
+        if (DOM.skill3Label) DOM.skill3Label.textContent = L.skills.s3.label;
+        if (DOM.skill3Sub) DOM.skill3Sub.textContent = L.skills.s3.sub;
     }
 
     // Pause Menü
-    const pTitle = document.getElementById('txt-pause-title');
-    if (pTitle) pTitle.textContent = L.pauseTitle;
-    const pScore = document.getElementById('txt-stat-score');
-    if (pScore) pScore.textContent = L.statScore;
-    const pHigh = document.getElementById('txt-stat-high');
-    if (pHigh) pHigh.textContent = L.statHigh;
-    const pLvl = document.getElementById('txt-stat-lvl');
-    if (pLvl) pLvl.textContent = L.statLvl;
-    const pResume = document.getElementById('txt-resume-btn');
-    if (pResume) pResume.textContent = L.resumeBtn;
-    const pLead = document.getElementById('txt-leaderboard-btn');
-    if (pLead) pLead.textContent = L.leaderboardBtn;
-    const pRestart = document.getElementById('txt-restart-btn');
-    if (pRestart) pRestart.textContent = L.restartBtn;
+    if (DOM.txtPauseTitle) DOM.txtPauseTitle.textContent = L.pauseTitle;
+    if (DOM.txtStatScore) DOM.txtStatScore.textContent = L.statScore;
+    if (DOM.txtStatHigh) DOM.txtStatHigh.textContent = L.statHigh;
+    if (DOM.txtStatLvl) DOM.txtStatLvl.textContent = L.statLvl;
+    if (DOM.txtResumeBtn) DOM.txtResumeBtn.textContent = L.resumeBtn;
+    if (DOM.txtLeaderboardBtn) DOM.txtLeaderboardBtn.textContent = L.leaderboardBtn;
+    if (DOM.txtRestartBtn) DOM.txtRestartBtn.textContent = L.restartBtn;
 
     // Leaderboard
-    const lTitle = document.getElementById('txt-lead-title');
-    if (lTitle) lTitle.textContent = L.leadTitle;
-    const lClose = document.getElementById('txt-lead-close');
-    if (lClose) lClose.textContent = L.leadClose;
+    if (DOM.txtLeadTitle) DOM.txtLeadTitle.textContent = L.leadTitle;
+    if (DOM.txtLeadClose) DOM.txtLeadClose.textContent = L.leadClose;
 
     // Victory Ekranı
-    const vTitle = document.getElementById('txt-victory-title');
-    if (vTitle) vTitle.textContent = L.victoryTitle;
-    const vDesc = document.getElementById('txt-victory-desc');
-    if (vDesc) vDesc.textContent = L.victoryDesc;
-    const vScoreLabel = document.getElementById('txt-victory-score-label');
-    if (vScoreLabel) vScoreLabel.textContent = L.victoryScoreLabel;
-    const vNext = document.getElementById('txt-next-btn');
-    if (vNext) vNext.textContent = L.nextBtn;
+    if (DOM.txtVictoryTitle) DOM.txtVictoryTitle.textContent = L.victoryTitle;
+    if (DOM.txtVictoryDesc) DOM.txtVictoryDesc.textContent = L.victoryDesc;
+    if (DOM.txtVictoryScoreLabel) DOM.txtVictoryScoreLabel.textContent = L.victoryScoreLabel;
+    if (DOM.txtNextBtn) DOM.txtNextBtn.textContent = L.nextBtn;
 
     // Reklam Rozetleri ve Butonları
-    const reviveBadge = document.getElementById('ad-badge-revive');
-    if (reviveBadge) reviveBadge.textContent = L.adBadgeRevive;
-    const scoreBadge = document.getElementById('ad-badge-score');
-    if (scoreBadge) scoreBadge.textContent = L.adBadgeScore;
-
-    const reviveEl = document.getElementById('txt-revive-btn');
-    if (reviveEl) reviveEl.textContent = L.reviveBtn;
-
-    const multEl = document.getElementById('txt-multiplier-btn');
-    if (multEl && (!DOM.rewardScoreBtn || !DOM.rewardScoreBtn.disabled)) multEl.textContent = L.multiplierBtn;
-
-    const adTitleEl = document.getElementById('ad-overlay-title');
-    if (adTitleEl) adTitleEl.textContent = L.adTitle;
-    const adDescEl = document.getElementById('ad-overlay-desc');
-    if (adDescEl) adDescEl.textContent = L.adDesc;
+    if (DOM.adBadgeRevive) DOM.adBadgeRevive.textContent = L.adBadgeRevive;
+    if (DOM.adBadgeScore) DOM.adBadgeScore.textContent = L.adBadgeScore;
+    if (DOM.txtReviveBtn) DOM.txtReviveBtn.textContent = L.reviveBtn;
+    if (DOM.txtMultiplierBtn && (!DOM.rewardScoreBtn || !DOM.rewardScoreBtn.disabled)) {
+        DOM.txtMultiplierBtn.textContent = L.multiplierBtn;
+    }
+    if (DOM.adOverlayTitle) DOM.adOverlayTitle.textContent = L.adTitle;
+    if (DOM.adOverlayDesc) DOM.adOverlayDesc.textContent = L.adDesc;
 
     // GameOver Ekranı
-    const goTitle = document.getElementById('txt-gameover-title');
-    if (goTitle) goTitle.textContent = L.gameoverTitle;
-    const goDesc = document.getElementById('txt-gameover-desc');
-    if (goDesc) goDesc.textContent = L.gameoverDesc;
-    const goScoreLabel = document.getElementById('txt-gameover-score-label');
-    if (goScoreLabel) goScoreLabel.textContent = L.gameoverScoreLabel;
-    const goRestart = document.getElementById('txt-restart-gameover-btn');
-    if (goRestart) goRestart.textContent = L.restartGameoverBtn;
+    if (DOM.txtGameoverTitle) DOM.txtGameoverTitle.textContent = L.gameoverTitle;
+    if (DOM.txtGameoverDesc) DOM.txtGameoverDesc.textContent = L.gameoverDesc;
+    if (DOM.txtGameoverScoreLabel) DOM.txtGameoverScoreLabel.textContent = L.gameoverScoreLabel;
+    if (DOM.txtRestartGameoverBtn) DOM.txtRestartGameoverBtn.textContent = L.restartGameoverBtn;
 
-    // Pistteki Mevcut Kapıların Dokularını Yeni Dille Yenile
+    // Pistteki Kapıların 3D Dokularını Yeni Dille Yenile
     refreshGateTextures(lang);
 
     localStorage.setItem('zr3d_lang', lang);
@@ -3606,7 +3728,7 @@ function getHighscore() {
 
 function openLeaderboard() {
     const lb = JSON.parse(localStorage.getItem(LB_KEY) || '[]');
-    const list = document.getElementById('leaderboard-list');
+    const list = DOM.leaderboardList;
     const L = LANG[Game.lang];
     list.innerHTML = '';
 
@@ -3626,13 +3748,13 @@ function openLeaderboard() {
         });
     }
 
-    document.getElementById('pause-modal').classList.add('hidden');
-    document.getElementById('leaderboard-modal').classList.remove('hidden');
+    DOM.pauseModal.classList.add('hidden');
+    DOM.leaderboardModal.classList.remove('hidden');
 }
 
 function closeLeaderboard() {
-    document.getElementById('leaderboard-modal').classList.add('hidden');
-    document.getElementById('pause-modal').classList.remove('hidden');
+    DOM.leaderboardModal.classList.add('hidden');
+    DOM.pauseModal.classList.remove('hidden');
 }
 
 // --------- SFX / BGM TOGGLES ---------
@@ -3642,10 +3764,8 @@ let _bgmEnabled = true;
 function toggleSfx() {
     _sfxEnabled = !_sfxEnabled;
     const L = LANG[Game.lang];
-    const btn = document.getElementById('toggle-sfx-btn');
-    const txt = document.getElementById('sfx-status-text');
-    txt.textContent = _sfxEnabled ? L.sfxOn : L.sfxOff;
-    btn.classList.toggle('muted', !_sfxEnabled);
+    DOM.sfxStatusText.textContent = _sfxEnabled ? L.sfxOn : L.sfxOff;
+    DOM.sfxBtn.classList.toggle('muted', !_sfxEnabled);
     // sfx objesi mute toggle
     if (_sfxEnabled) {
         sfx.init();
@@ -3658,10 +3778,8 @@ function toggleSfx() {
 function toggleBgm() {
     _bgmEnabled = !_bgmEnabled;
     const L = LANG[Game.lang];
-    const btn = document.getElementById('toggle-bgm-btn');
-    const txt = document.getElementById('bgm-status-text');
-    txt.textContent = _bgmEnabled ? L.bgmOn : L.bgmOff;
-    btn.classList.toggle('muted', !_bgmEnabled);
+    DOM.bgmStatusText.textContent = _bgmEnabled ? L.bgmOn : L.bgmOff;
+    DOM.bgmBtn.classList.toggle('muted', !_bgmEnabled);
 }
 
 // --------- PAUSE / RESUME ---------
@@ -3674,30 +3792,30 @@ function openPauseMenu() {
     Game.state = GAME_STATE.PAUSED;
     Game.isDragging = false;
 
-    // Stats doldur
-    document.getElementById('pause-score-val').textContent = Game.score.toLocaleString();
-    document.getElementById('pause-high-val').textContent = getHighscore().toLocaleString();
-    document.getElementById('pause-lvl-val').textContent = Game.level;
+    // Stats doldur (DOM cache kullan)
+    DOM.pauseScoreVal.textContent = Game.score.toLocaleString();
+    DOM.pauseHighVal.textContent = getHighscore().toLocaleString();
+    DOM.pauseLvlVal.textContent = Game.level;
 
     // SFX/BGM durumları
     const L = LANG[Game.lang];
-    document.getElementById('sfx-status-text').textContent = _sfxEnabled ? L.sfxOn : L.sfxOff;
-    document.getElementById('bgm-status-text').textContent = _bgmEnabled ? L.bgmOn : L.bgmOff;
+    DOM.sfxStatusText.textContent = _sfxEnabled ? L.sfxOn : L.sfxOff;
+    DOM.bgmStatusText.textContent = _bgmEnabled ? L.bgmOn : L.bgmOff;
 
-    document.getElementById('pause-modal').classList.remove('hidden');
+    DOM.pauseModal.classList.remove('hidden');
 }
 
 function closePauseMenuImmediate() {
-    document.getElementById('pause-modal').classList.add('hidden');
-    document.getElementById('leaderboard-modal').classList.add('hidden');
+    DOM.pauseModal.classList.add('hidden');
+    DOM.leaderboardModal.classList.add('hidden');
     if (Game.state === GAME_STATE.PAUSED) {
         Game.state = Game._prevState;
     }
 }
 
 function closePauseMenu() {
-    document.getElementById('pause-modal').classList.add('hidden');
-    document.getElementById('leaderboard-modal').classList.add('hidden');
+    DOM.pauseModal.classList.add('hidden');
+    DOM.leaderboardModal.classList.add('hidden');
     startCountdown(() => {
         if (Game.state === GAME_STATE.PAUSED) {
             Game.state = Game._prevState;
